@@ -1,0 +1,17 @@
+{
+  "version": "0.7.0",
+  "filename": "DeviceBridge-0.7.0.exe",
+  "bytes": 70423359,
+  "sha256": "2a56276df30f9cff88714213a4014345926339f0e3cb29165a61b91519e497e9",
+  "parts": [
+    "downloads/devicebridge-0.7-00.part",
+    "downloads/devicebridge-0.7-01.part",
+    "downloads/devicebridge-0.7-02.part",
+    "downloads/devicebridge-0.7-03.part",
+    "downloads/devicebridge-0.7-04.part",
+    "downloads/devicebridge-0.7-05.part",
+    "downloads/devicebridge-0.7-06.part",
+    "downloads/devicebridge-0.7-07.part",
+    "downloads/devicebridge-0.7-08.part"
+  ]
+}
