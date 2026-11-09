@@ -1,0 +1,25 @@
+DeviceBridge uses NAudio 2.2.1 (including NAudio.Core, Wasapi, WinMM, WinForms,
+Midi and Asio assemblies) under the MIT license. See licenses/NAudio-MIT.txt.
+NAudio: https://github.com/naudio/NAudio
+
+The portable build includes Microsoft .NET 8.0.33 Windows x64 runtime components,
+Windows Desktop runtime components, and System.Security.Cryptography.ProtectedData
+8.0.0. Their licenses and notices are in licenses/.
+.NET: https://github.com/dotnet/runtime
+Windows Desktop: https://github.com/dotnet/winforms
+
+The Microsoft runtime incorporates additional third-party components identified
+in the supplied third-party notice files. Notices are included without alteration.
+The app uses no cloud relay service. See the release 0.3 driver notice below.
+
+Release 0.3 embeds the original VB-CABLE Driver Pack 46 from VB-Audio unchanged.
+VB-CABLE is donationware, all participations are welcome. www.vb-cable.com
+Original licensing: https://vb-audio.com/Services/licensing.htm
+Professional deployment requires appropriate VB-Audio licenses.
+The original package license is displayed in Microphone setup before installation.
+The original package and readme are retained when extracted.
+
+Release 0.5 uses BouncyCastle.Cryptography 2.7.0 under its MIT license for SRP-6a
+password-authenticated pairing. See licenses/BouncyCastle-MIT.txt.
+Source: https://github.com/bcgit/bc-csharp
+Package: https://www.nuget.org/packages/BouncyCastle.Cryptography/2.7.0

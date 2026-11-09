@@ -1,0 +1,47 @@
+name: Build and test Windows app
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - '.github/workflows/windows-app.yml'
+  pull_request:
+    paths:
+      - 'app/**'
+      - '.github/workflows/windows-app.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Publish self-contained Windows x64 app
+        run: ./app/DeviceBridge/Build.ps1 -Portable
+      - name: Run non-hardware regression checks
+        run: |
+          $exe = Join-Path $PWD 'app/DeviceBridge/portable/DeviceBridge.exe'
+          $process = Start-Process -FilePath $exe -ArgumentList '--self-test' -PassThru -Wait -WindowStyle Hidden
+          $report = Join-Path (Split-Path $exe) 'self-test-result.txt'
+          if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
+          if ($process.ExitCode -ne 0) { throw "Regression checks failed: $($process.ExitCode)" }
+      - name: Upload Windows test build and results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: DeviceBridge-Windows-x64-${{ github.sha }}
+          path: |
+            app/DeviceBridge/portable/DeviceBridge.exe
+            app/DeviceBridge/portable/self-test-result.txt
+          if-no-files-found: warn

@@ -1,0 +1,28 @@
+DEVICEBRIDGE 0.7 — PHYSICAL ACCEPTANCE CHECK
+
+Use version 0.7 on BOTH PCs. Exit old versions completely first. The desk PC is
+PC A (keyboard, mouse, headphones and microphone); the Ethernet PC is PC B.
+
+1. Pair with a fresh six-character key, or reconnect the saved pair. If needed,
+   use the connection address under More options. Verify both show Connected.
+2. Keep the session running for two minutes. Minimize, maximize and restore each
+   window. Close one connected window with X: sharing should continue in the tray.
+   Open DeviceBridge again to restore that session without another key.
+3. Choose the other screen's position on PC A. Move across that edge and back.
+   Try typing, dragging and scrolling. No Start button or F8 is required.
+4. On PC A open Check my setup and ask PC B to send the headphone test. Confirm
+   the tone is audible through PC A's selected headphones. This checks network
+   and playback. Then play browser/music audio on PC B to verify actual capture.
+5. Pause other audio on PC B. Speak into PC A's mic and confirm its outgoing
+   level moves. If not, select the correct Microphone to share in DeviceBridge.
+6. Confirm PC B's Shared microphone received level moves. In its calling app or
+   microphone-test app choose CABLE Output and confirm the same voice arrives.
+   Test microphone and system sound together too; report any echo or mixed audio.
+7. Copy the diagnostic report on both PCs. Reports include device names, default
+   devices, packet counts and errors, not keys, typed text or recorded audio.
+8. Verify explicit Disconnect, tray Disconnect and quit, and Ctrl+Alt+Esc stop
+   sharing. Reopen and verify saved reconnection. X alone should keep sharing.
+
+Do not treat a moving meter or automated tests as proof of what a calling app
+selected. Physical listening/voice confirmation is required. No audio is saved
+by the built-in level checks. This preview remains unsigned; Windows may warn.

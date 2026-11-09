@@ -1,0 +1,11 @@
+* text=auto
+*.cs text
+*.csproj text
+*.ps1 text
+*.yml text eol=lf
+*.mjs text eol=lf
+*.part binary
+*.zip binary
+*.jpg binary
+*.png binary
+*.exe binary

@@ -1,0 +1,41 @@
+RELEASE 0.3 — DRIVER AND SIGNING
+
+The original VBCABLE_Driver_Pack46.zip is embedded unchanged inside DeviceBridge.
+Official source: https://download.vb-audio.com/Download_CABLE/VBCABLE_Driver_Pack46.zip
+Archive SHA-256: BC44E8974191A5A2427D6C979E2DAB08DBB09925F3F435DFA2F0BA3E45B6EB90
+Installer SHA-256: 734C35DFA6D98F48782A451633CEB471166EC70D60482FD89A1123D0EE3C4F41
+Authenticode verification on November 9, 2026:
+VBCABLE_Setup_x64.exe: Valid, BUREL VINCENT Entrepreneur individuel.
+vbaudio_cable64_win10.cat: Valid, Microsoft Windows Hardware Compatibility Publisher.
+The driver and installer are not modified or re-signed by DeviceBridge.
+
+VB-CABLE by VB-Audio, www.vb-cable.com, is donationware. Contributions and license
+purchases are welcome. Professional use/deployment requires appropriate licenses.
+Current author distribution permission, including embedded packages:
+https://vb-audio.com/Services/licensing.htm (VB-CABLE Distribution with another product).
+The original readme/license remains in the archive and appears before installation.
+
+On the other PC, use Set up included microphone driver. The user reads the vendor
+license, explicitly chooses installation, approves Windows administrator elevation,
+and follows the original vendor installer. The vendor requires a restart.
+No silent installation or reboot is triggered by DeviceBridge itself.
+After restart, DeviceBridge selects CABLE Input as the received microphone's output.
+In calling applications select CABLE Output as the microphone. Enable Share my
+microphone on the desk PC. No separate driver download is needed.
+Driver installation and physical microphone routing have NOT been tested here;
+no driver was installed on the development machine.
+
+TRUSTED APP SIGNING REMAINS PENDING
+The app executable is still unsigned. No signing certificate was present, and the
+user chose to prepare signing for later. Sign-Release.ps1 supports an existing
+trusted code-signing certificate in the Windows certificate store, never a pasted
+private key. A Microsoft Artifact Signing account may instead be integrated through
+its official signing tooling once identity verification and access are ready.
+
+Release order: build -> hardware validation -> sign executable -> verify Authenticode
+and timestamp -> regenerate website release.json and download parts -> publish.
+Signing changes the binary hash. Never re-use old release hashes after signing.
+The script does not disable Windows warnings or security protections. Valid signing
+identifies a publisher; Microsoft SmartScreen reputation is a separate decision and
+may still show warnings on new files. A Store distribution route can be evaluated.
+https://learn.microsoft.com/windows/apps/package-and-deploy/smartscreen-reputation

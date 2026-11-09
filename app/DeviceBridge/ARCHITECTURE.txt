@@ -1,0 +1,158 @@
+DEVICEBRIDGE — ARCHITECTURE AND DELIVERY PLAN
+
+USER FLOW
+Initial: generate key on desk -> paste on remote -> connect -> enable devices.
+Later: reconnect saved PC on desk -> reconnect saved PC on remote -> enable devices.
+No accounts, public server, router configuration or manual port entry.
+Local firewall approval may be necessary once. Virtual microphone integration
+needs an independently installed audio driver until a signed driver is packaged.
+
+CURRENT IMPLEMENTATION
+One Windows Forms application, .NET 8, Windows 10/11 x64.
+
+  DESK PC                                       REMOTE PC
+  MainForm                                      MainForm
+  PairingHost <---- pinned TLS + shared secret -- Connection.JoinAsync
+  keyboard/mouse hooks -------- input ---------> SendInput
+  default mic capture ---------- PCM ----------> selected playback endpoint
+  selected speakers <----------- PCM ----------- WASAPI system loopback
+
+Each component:
+- MainForm.cs: same interface on both devices; role-aware controls, connection
+  lifecycle, explicit opt-in per device, global shortcuts, local status.
+- Pairing.cs: enumerates local IPv4 addresses; creates a self-signed RSA certificate;
+  listens on one selected adapter. DB1 invitation encodes IPv4, port, a random
+  authentication secret, SHA-256 certificate fingerprint, and ten-minute expiry.
+  The key is URL-safe base64 JSON, not a short numeric PIN, so it can carry all
+  connection information without discovery or a cloud rendezvous service.
+- Connection.cs: TCP with NoDelay + TLS 1.2/1.3; client pins certificate before
+  sending its secret. Server compares secrets in constant time. Authentication
+  has an eight-second timeout. Failed clients do not consume the invitation.
+  Successful authentication stops the listener; only one active peer is supported.
+- TrustedPeer.cs: remembers one role, endpoint, certificate fingerprint and secret;
+  desk also stores its certificate/private key. All saved data is protected using
+  Windows DPAPI CurrentUser. Successful authentication issues a replacement secret.
+  Only the desk listens. Reconnect reuses the saved address/port and certificate.
+- InputBridge.cs: WH_KEYBOARD_LL / WH_MOUSE_LL on desk, SendInput on remote.
+  Capture is explicitly enabled and suppresses local interaction. Relative
+  movement is measured around a held local pointer to avoid screen-edge limits.
+  It tracks injected key/button state and releases it on stop or disconnect.
+  Receiver permission is required before input-start can enable injection.
+- AudioBridge.cs: NAudio WaveInEvent for default microphone (48 kHz, 16-bit mono);
+  WasapiLoopbackCapture for remote system sound (native device PCM/float format).
+  Sample-aligned chunks travel through TLS. BufferedWaveProvider and WaveOutEvent
+  play them at the selected endpoint. Playback buffers are bounded and discard
+  excess accumulated latency. No virtual microphone is created by the app itself.
+- Program.cs / SelfTest.cs: application entry and opt-in transport regression suite.
+
+PROTOCOL
+4-byte big-endian JSON length followed by UTF-8 JSON, maximum 256 KiB.
+Packet kinds: auth, ready, ping, permission, input-start, input-end, key, move,
+mouse, mic-format, mic, mic-stop, sound-format, sound, sound-stop, refresh-audio.
+Audio bytes use JSON base64. The serializer provides framing consistency rather
+than maximum transport efficiency. A single writer serializes outgoing frames.
+Outgoing queue capacity is 512 packets; overflow disconnects instead of silently
+dropping key releases. Each peer sends a heartbeat every second; six seconds of
+silence ends the connection. Receiver processing is marshaled to the UI thread.
+This is a deliberate prototype simplification: stalled audio on TCP can delay
+input. Production should separate transport paths and move processing off UI.
+
+CURRENT LIMITS
+One saved pair, one active connection, IPv4 private LAN, foreground desktop app.
+No screen streaming, clipboard synchronization, file transfer, cloud relay,
+remote wake, automatic IP rediscovery, background Windows service, mobile OS,
+driver installation or signed installer. New IP/occupied port requires re-pairing.
+No promise of low latency, seamless screen-edge switching or game compatibility.
+Input does not bypass Windows integrity levels, secure desktop, or login screens.
+Crash-safe credential rotation/recovery is not implemented; re-pair if a saved
+secret becomes out of sync following a crash or interrupted handshake.
+
+DELIVERY PLAN
+Phase 1 (implemented): native UI, local pairing, TLS transport, visible controls,
+saved pairing, input capture/injection, audio capture/playback, portable executable.
+Phase 2 (next hardware acceptance gate): run on two physical PCs; verify letters,
+modifiers, dragging, scrolling, X buttons, multi-monitor pointer, F8 and emergency
+stop; unplug Wi-Fi with keys held; check that no keys remain down; test speaker and
+microphone streams independently and together; reconnect after both apps restart;
+measure latency, jitter, CPU and bandwidth on real Wi-Fi.
+Phase 3: separate input/audio transports, binary PCM or Opus, dedicated processing
+threads, adaptive jitter buffers, endpoint-change handling, richer device selection,
+mutual long-lived identities, explicit revocation and recoverable trust rotation,
+local discovery to survive DHCP changes, independent security review.
+Phase 4: signed installer and application, optional virtual audio driver guided
+setup; assess signing/licensing and reboot requirements. Then package clean-machine
+install/uninstall checks and distribution updates.
+
+NEEDED FROM THE USER
+Two Windows 10/11 x64 PCs on the same private Wi-Fi/Ethernet, access to both
+displays, a keyboard/mouse, speakers or headphones, and a microphone. For a shared
+mic in other applications: an existing virtual cable on the remote PC, or a later
+decision about an installer-supported driver. For distribution: a signing identity
+and installer choices after the hardware prototype is accepted.
+
+IMPLEMENTATION REFERENCES
+Microsoft SendInput documentation (including UIPI restrictions):
+https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-sendinput
+Microsoft low-level keyboard hook documentation:
+https://learn.microsoft.com/windows/win32/winmsg/lowlevelkeyboardproc
+NAudio loopback capture documentation:
+https://github.com/naudio/NAudio/blob/release/2.x/Docs/WasapiLoopbackCapture.md
+NAudio source and release information:
+https://github.com/naudio/NAudio
+
+VERSION 0.2 SIMPLIFICATION
+WelcomeForm provides two role choices and saved reconnection. MainForm chooses
+Wi-Fi automatically, generates the desk key on entry, and keeps network, output
+and microphone settings behind More options. The remote Connect action explicitly
+allows input and system sound; sound starts automatically after pairing. F8 or
+the Start button still enables keyboard/mouse capture deliberately. Microphone
+capture remains off until selected. The .NET runtime, guide and third-party
+notices are embedded in a compressed single-file executable. No installer or ZIP
+is necessary. A virtual microphone driver and code signing remain outstanding.
+
+VERSION 0.3 MICROPHONE BUNDLE
+The official VBCABLE_Driver_Pack46.zip is embedded unchanged. DriverBundle verifies
+its fixed SHA-256 and presents the original vendor license before offering the
+vendor's signed x64 installer. Installation remains an explicit user action with
+Windows elevation and the vendor-required restart; no driver was installed here.
+The remote PC selects the installed cable automatically. The desk PC has a visible
+microphone sharing toggle. Calling apps select CABLE Output as their microphone.
+Audio capture avoids VB-Audio endpoints as physical source devices to limit loops
+if driver installation changes Windows defaults. Hardware validation is required.
+Sign-Release.ps1 is provided for later trusted app signing; release 0.3 is unsigned.
+See SIGNING-AND-DRIVER.txt for signature evidence and official redistribution terms.
+
+VERSION 0.4 TEST BUILD
+Incoming messages use a 512-item session inbox drained in bounded UI timer batches.
+Disconnected inboxes cannot feed stale input. Native held-state release is locked,
+with a canceled session token checked before injection. Cursor recentering only
+occurs if the cursor actually moved from its anchor. Old capture generations cannot
+send late data/errors into a restarted audio stream. Cleanup continues when audio
+endpoints disappear. Saved reconnect credentials remain stable after initial pairing.
+Connection counters and heartbeat round-trip timing support diagnosis. Check my setup
+provides a safe typing/click target, incoming and local microphone level meters,
+short speaker tones, and reports with no keys, passwords, raw audio or private IPs.
+The report preserves the last ended connection. Test tones and mic checks require a
+user action. No hardware acceptance claim is made without two physical PCs.
+The UI is English; unused framework translation resources are omitted to reduce size.
+
+VERSION 0.5
+Six-character random codes replace long user-facing invitations. Local UDP discovery
+(port 48931) advertises only address/port and a query nonce, never the code. SRP-6a
+in BouncyCastle.Cryptography 2.7.0 authenticates the code; evidence is HMAC-bound to
+the actual TLS certificate and a fresh client nonce. Saved sessions still use
+strong reconnect credentials and a pinned certificate. Five rejected password
+proofs lock the invitation, and keys expire after ten minutes. The new protocol
+has not had independent security review. Legacy reconnect capability is retained.
+Left/right/above/below geometry is saved per user. A dedicated pumping thread owns
+input hooks so UI/audio/setup work cannot time them out. Source edge crossing
+starts capture; the receiver positions its pointer on the joining edge and sends
+a return request on outward movement through it. Both sides release held inputs.
+The source returns its pointer with an inset to avoid bounce. Setup dialogs pause
+automatic edge switching. Receiver permission is visible through Connect & allow
+and an Allow checkbox. An input acknowledgement makes denial explicit. Peer
+capability version 5 is required for automatic handoff; F8 remains available.
+Network help supports Wi-Fi and Ethernet together. With user trust confirmation
+and Windows elevation, only the selected network becomes Private; TCP/UDP app rules
+are restricted to Private and LocalSubnet. Firewall/antivirus are not disabled.
+Network-profile diagnostics are read-only. Physical two-PC acceptance is pending.
