@@ -4,11 +4,13 @@ A static, responsive download website for DeviceBridge, the Windows app for shar
 
 Windows 10/11 x64. The website follows the latest published stable GitHub Release. Before the first stable release, it serves the checked-in **0.7.0** preview.
 
-Public website: https://satish01-oss.github.io/Drive-Bridge/
+Public website: https://devicebridge-frontend.vercel.app/
 
-Windows + Android remote preview: https://satish01-oss.github.io/Drive-Bridge/remote-preview.html
+Windows + Android remote preview: https://devicebridge-frontend.vercel.app/remote-preview.html
 
-Progress and acceptance evidence: https://satish01-oss.github.io/Drive-Bridge/improvements.html
+Progress and acceptance evidence: https://devicebridge-frontend.vercel.app/improvements.html
+
+Compatibility release/update feed: https://satish01-oss.github.io/Drive-Bridge/
 
 Stable Windows is **0.8.0**. The separate **0.9.0-preview.6** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
 

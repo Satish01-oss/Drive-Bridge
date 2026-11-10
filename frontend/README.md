@@ -1,5 +1,8 @@
 # DeviceBridge website — Vercel frontend
 
+Public URL: https://devicebridge-frontend.vercel.app/
+Progress: https://devicebridge-frontend.vercel.app/improvements.html
+
 This folder owns the download website and public progress checklist. It does
 not start the signaling server, build Windows or Android, or deploy backend
 functions. The connection service stays in `remote/` on Render.

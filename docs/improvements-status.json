@@ -532,8 +532,8 @@
       "title": "Deploy the frontend to the connected Vercel team",
       "plan": "Create the DeviceBridge frontend project in the verified Satish Vercel team, deploy the tested static build from GitHub, and check the public page and actual app download.",
       "acceptance": "A public Vercel URL loads the website and downloads the verified versioned Windows installer; the connection service stays on Render.",
-      "status": "in_progress",
-      "evidence": "The user authorized a new project in the connected team. Created devicebridge-frontend (prj_IM8VZ3LmHIhN1AgmuKzzy4BtRvnF). Local static build passes. Production deployment and browser/download acceptance are next."
+      "status": "done",
+      "evidence": "Deployed source 533ce937cafefd711289f5391f155fdb1a0094f8 to devicebridge-frontend in the verified Satish Vercel Hobby team. Production deployment dpl_EhvpAMML2xH2ZBKoF9ni6Bk1JRTe is READY at https://devicebridge-frontend.vercel.app/. Unauthenticated homepage, release manifest, preview page, update feed and checklist return 200. The browser Download button reconstructed and SHA-256 checked the 65,153,291-byte Windows 0.8.0 installer and showed 100% App checked and ready. Git context confirms the project is linked to Satish01-oss/Drive-Bridge. No paid resources were enabled; the connection backend stays on Render."
     },
     {
       "id": "phone-microphone-availability",
@@ -554,5 +554,5 @@
       "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
     }
   ],
-  "stage": "Vercel frontend deployment is the current priority: website source is separated and its real-download build passes. Preview 6 installed on Android with saved PC preserved and live update check working. Preview 7 fullscreen layouts and cancellation checks pass; packaging and physical acceptance are pending. Microphone permission/routing investigation is tracked separately."
+  "stage": "Vercel frontend is live with the browser installer integrity check passed. The repository separates frontend/site source, generated frontend/dist and the Render backend. Android preview 6 preserves saved devices and reads its update feed. Fullscreen preview 7 is implemented and layout-tested but awaits packaging and physical acceptance. Phone microphone permission/routing remains under investigation."
 }
