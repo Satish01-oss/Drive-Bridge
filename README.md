@@ -10,6 +10,7 @@ Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 
 ## Repository layout
 
+- `remote/`: New cross-platform remote-access foundation and protocol documentation; not yet connected to the released Windows app. See [development status](remote/README.md).
 - `app/DeviceBridge/`: Windows app source, build/signing scripts, regression checks, original driver bundle and third-party notices. See [app build instructions](app/DeviceBridge/README.md).
 - `dist/`: Complete public download website, photographs, release manifests and app download data.
 - `scripts/verify-site.mjs`: Website link and EXE integrity validation.

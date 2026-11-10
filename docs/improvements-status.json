@@ -19,8 +19,8 @@
       "title": "Design the shared session protocol",
       "plan": "Specify version negotiation, device capabilities, input events, screen/audio channels, permissions, disconnect and reconnect messages. Preserve the existing Windows mode.",
       "acceptance": "A documented protocol and compatibility tests cover new clients and the existing Windows app.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "done",
+      "evidence": "Designed and documented remote protocol v1 in remote/PROTOCOL.md. Implemented strict message/input validation, version/capability negotiation and replay/session-generation gating in remote/core/protocol.mjs. Twelve local contract tests pass, including all desktop/mobile role combinations and rejection of the existing Windows LAN protocol 8. The released Windows source is unchanged; native adapter integration is still pending."
     },
     {
       "id": "interface",
@@ -262,8 +262,8 @@
       "title": "Show when the computer loses internet",
       "plan": "Use heartbeats and presence expiry to show PC offline / waiting to reconnect, with last-known status and Reconnect now.",
       "acceptance": "Disconnect the computer internet while the phone stays online; the phone shows the correct state.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented host-offline and phone-offline states in the executable recovery policy. Fake-clock outage tests pass. Presence heartbeat integration and the actual phone status screen are not built yet."
     },
     {
       "id": "reconnect",
@@ -271,8 +271,8 @@
       "title": "Reconnect when the computer internet returns",
       "plan": "Retry with bounded backoff, renew transport and relay credentials, and authenticate the previously approved device. Keep session IDs and stale attempts isolated.",
       "acceptance": "Restore the computer internet and resume without a fresh key when trusted reconnect was approved.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented a tested recovery policy with 15-second attempt timeout, capped exponential backoff, Reconnect now and rejection of stale success/close callbacks. A simulated host internet outage recovers with the prior approved grant. WebRTC/service/native integration and physical internet tests remain."
     },
     {
       "id": "reconnect-consent",
@@ -280,8 +280,8 @@
       "title": "Make permission to reconnect explicit",
       "plan": "Add Allow this trusted device to reconnect during initial approval. Respect revocation, expiry and view/input/microphone choices on every recovery.",
       "acceptance": "Untrusted or revoked devices need approval; reconnect never broadens the saved permissions.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "The policy requires explicit reconnect consent, validates grant identity/revision/expiry and never expands permissions. Local tests cover revocation, expiry and reconnect-disabled behavior. Real identity verification, host storage and approval UI remain unimplemented."
     },
     {
       "id": "network",
@@ -298,8 +298,8 @@
       "title": "Clear stuck input and stale media on disconnect",
       "plan": "Release pressed keys/buttons, restore cursor ownership, reset audio buffers and establish a clean stream on reconnect. Require fresh mic consent if needed.",
       "acceptance": "Interrupt a session during a drag, key press and microphone use; no stuck state or old audio survives.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Every policy drop emits transport cancellation, release-input, restore-pointer and stop-media effects. Local tests verify cleanup order and stale-session isolation. Native adapters must still execute these actions; physical drag/key/microphone interruption tests are pending."
     },
     {
       "id": "restart",
@@ -373,5 +373,6 @@
       "status": "planned",
       "evidence": "Not implemented or verified yet."
     }
-  ]
+  ],
+  "stage": "Connection foundation in development. Protocol and reconnect-policy tests pass locally; the new cross-platform apps, native adapters and internet service are not built yet."
 }

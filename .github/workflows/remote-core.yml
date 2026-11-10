@@ -1,0 +1,32 @@
+name: Test remote connection foundation
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'remote/**'
+      - '.github/workflows/remote-core.yml'
+  pull_request:
+    paths:
+      - 'remote/**'
+      - '.github/workflows/remote-core.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  contract:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test protocol and reconnect policy (no device access)
+        run: node --test remote/core/protocol.test.mjs remote/core/recovery.test.mjs
