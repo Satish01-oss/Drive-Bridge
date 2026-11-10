@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "updated": "2026-11-10",
+  "updated": "2026-11-11",
   "title": "DeviceBridge · Next",
   "summary": "Current release: control a Windows PC from Android over the internet, retain local Windows sharing, and reconnect trusted devices after internet loss. Mac and iPhone are deferred. Hosting budget: zero.",
   "items": [
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Preview 5 Windows and Android assets are published and checksummed. Windows passes 92 checks plus isolated install/reinstall/shortcut/uninstall tests. The signed Android APK has the same release identity and version code 905 for updates. The user installed preview 4 and confirmed live screen viewing after fresh pairing; preview 5 installation and remaining physical feature acceptance are pending."
+      "evidence": "Preview 7 is published with the same Android publisher identity and version code 907, installable through preview 6 App updates. Windows passes 92 checks and isolated installation tests. The user already confirmed the preview 6 manual upgrade preserved the saved PC and its live update check worked. The 6-to-7 in-app installation is the next physical acceptance step."
     },
     {
       "id": "regression",
@@ -452,7 +452,7 @@
       "plan": "Publish a source-pinned prerelease with the Windows installer, signed Android APK and SHA-256 sums. Keep stable Windows separate and provide a phone-friendly setup page.",
       "acceptance": "Public release assets match the tested source and advertised hashes; the preview page clearly states unfinished acceptance tests.",
       "status": "done",
-      "evidence": "Published preview 6 from 47bf742b6a07e4ef81d4e18b9ed66438628a0ef8 with verified Windows and signed Android downloads, SHA-256 sums and Android-update.json for in-app updates. Windows workflow 42866990613 passed 92 checks and isolated installer tests. Android native checks: 9. Shared checks: 91. New phone controls require physical acceptance."
+      "evidence": "Published preview 7 from 06c3ea231d2ad0c8cd11c137a974a411d0ef6ce0 with verified Windows and signed Android downloads, SHA-256 sums and Android-update.json. Windows workflow 42875936821 passed 92 checks and isolated installation tests. Shared checks: 95; Android native checks: 9. Public download URLs and asset hashes match the release. Stable Windows remains 0.8.0."
     },
     {
       "id": "android-install-acceptance",
@@ -515,7 +515,7 @@
       "plan": "Use Android immersive fullscreen, keep the computer screen fitted to the available area, place touch/right-click/scroll/sound/microphone/shortcut controls in a hamburger Tools menu, and keep text plus Send at the bottom.",
       "acceptance": "On a physical Android phone, fullscreen opens/exits, Tools exposes every existing control, and text/Send remain usable in both orientations with the keyboard open.",
       "status": "in_progress",
-      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending. The final bundle also distinguishes unavailable microphone permission from missing Windows routing setup, and disables audio controls when the effective grant does not allow them. Native Android compilation and nine native tests pass; shared coverage is now 95 tests. Preview 7 is being packaged for delivery through the preview 6 updater."
+      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending. The final bundle also distinguishes unavailable microphone permission from missing Windows routing setup, and disables audio controls when the effective grant does not allow them. Native Android compilation and nine native tests pass; shared coverage is now 95 tests. Preview 7 is being packaged for delivery through the preview 6 updater. Published in preview 7 with the signed APK and in-app update descriptor. Physical phone fullscreen/rotation/keyboard acceptance is next."
     },
     {
       "id": "frontend-separation",
@@ -542,7 +542,7 @@
       "plan": "Check the active host permission grant and effective audio capability. Explain missing permission or driver setup clearly, then test the phone microphone after explicit Windows approval.",
       "acceptance": "The phone microphone control is available for an approved microphone grant and a Windows recording app receives the phone audio.",
       "status": "in_progress",
-      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet. Added an explicit phone-side explanation for a microphone not included in the grant and a separate setup instruction when the host approved it but native routing is unavailable. These messages do not bypass host consent. A fresh microphone-approved physical test is still pending."
+      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet. Added an explicit phone-side explanation for a microphone not included in the grant and a separate setup instruction when the host approved it but native routing is unavailable. These messages do not bypass host consent. A fresh microphone-approved physical test is still pending. Read-only native endpoint enumeration on this PC found no active VB-CABLE playback endpoint. No recording or playback was started. The included driver needs one-time setup/restart before a fresh host-approved microphone test."
     },
     {
       "id": "fullscreen-layout-checks",
@@ -554,5 +554,5 @@
       "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
     }
   ],
-  "stage": "Vercel frontend is live and automatic Git-push deployment is verified. Packaging fullscreen preview 7 for the Android in-app updater: portrait/landscape/reduced-height layouts and 95 shared checks pass. Native Android checks: 9. Microphone controls now explain missing grant versus routing setup; physical microphone approval/audio testing remains pending."
+  "stage": "Vercel frontend is live and download integrity is verified. Fullscreen preview 7 is published for installation through Android App updates. Phone preview 6 preserved its saved PC and update checks work. Microphone diagnosis: current grant omitted microphone and this PC has no active virtual routing endpoint; included driver setup/restart and fresh approval are required. Fullscreen, updater-install and audio physical acceptance are pending."
 }
