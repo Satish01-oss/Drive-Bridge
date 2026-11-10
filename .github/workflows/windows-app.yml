@@ -58,6 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: DeviceBridge-Windows-x64-${{ github.sha }}
+          retention-days: 1
           path: |
             app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe
             app/DeviceBridge/installer-output/SHA256.txt

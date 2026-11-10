@@ -6,11 +6,13 @@ internal static class AppActivation
 {
     public static string Version => typeof(AppActivation).Assembly.GetName().Version?.ToString(3) ?? "0.8.0";
     public static string Title => "DeviceBridge " + Version;
+    public static string RemoteTitle => Title + " · Remote preview";
     public static readonly Icon Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
     public static readonly uint RestoreMessage = RegisterWindowMessage("DeviceBridge.RestoreSession.v1");
     public static bool RaiseExisting()
     {
         var root = FindWindow(null, Title);
+        if (root == 0) root = FindWindow(null, RemoteTitle);
         return root != 0 && PostMessage(root, RestoreMessage, 0, 0);
     }
     [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern nint FindWindow(string? name, string title);

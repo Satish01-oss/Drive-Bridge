@@ -20,7 +20,7 @@
       "plan": "Specify version negotiation, device capabilities, input events, screen/audio channels, permissions, disconnect and reconnect messages. Preserve the existing Windows mode.",
       "acceptance": "A documented protocol and compatibility tests cover new clients and the existing Windows app.",
       "status": "done",
-      "evidence": "Designed and documented remote protocol v1 in remote/PROTOCOL.md. Implemented strict message/input validation, version/capability negotiation and replay/session-generation gating in remote/core/protocol.mjs. Twelve local contract tests pass, including all desktop/mobile role combinations and rejection of the existing Windows LAN protocol 8. The released Windows source is unchanged; native adapter integration is still pending."
+      "evidence": "Remote protocol v1 is documented in remote/PROTOCOL.md with strict message/input validation, capability negotiation and replay/session gating. Twelve contract tests pass; native Windows signing and Android signing fixtures match the shared contract. The existing LAN protocol remains version 8 and is distinct from remote access."
     },
     {
       "id": "interface",
@@ -35,10 +35,10 @@
       "id": "matrix",
       "group": "01 · Scope and foundations",
       "title": "Define supported versions and hardware",
-      "plan": "Choose minimum Windows, macOS, Android and iOS versions after testing capture, codecs and audio support. Include Apple Silicon and decide Intel Mac coverage.",
-      "acceptance": "Publish a supported-device matrix based on actual builds and test results.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "plan": "Publish Windows x64 and Android minimum versions from actual builds, then validate them on physical hardware. Apple support is deferred.",
+      "acceptance": "The Windows/Android preview page states build requirements and distinguishes tested devices from build targets.",
+      "status": "in_progress",
+      "evidence": "Current builds target Windows 10/11 x64 and Android 8+ (API 26), compiling with SDK 37.0. Windows build/installer tests and Android build/native tests pass. Physical compatibility across older OS versions is not yet verified."
     },
     {
       "id": "service",
@@ -56,7 +56,7 @@
       "plan": "Use short-lived random keys, strict attempt limits, and first-time approval on the computer; exchange strong device credentials after approval.",
       "acceptance": "Expired, guessed, replayed and rejected keys cannot authorize a session.",
       "status": "in_progress",
-      "evidence": "Implemented two-minute six-character keys, attempt limits, pending host approvals, signed permission grants and rejection of replayed/expired requests. QR UI and native client approval screens remain."
+      "evidence": "Six-character keys expire in two minutes; accepted requests allow five minutes for explicit host approval. Replacement keys invalidate older requests. Native Windows approval worked in the authorized local test. The approval area now appears above key/options and notifies/restores the Windows window. Expiry/guess/replay rejection is tested; QR pairing remains unfinished."
     },
     {
       "id": "trust",
@@ -65,7 +65,7 @@
       "plan": "Store device keys in OS-protected storage. Separate screen viewing, input, microphone and permission to reconnect; allow revocation on the computer.",
       "acceptance": "A revoked device cannot reconnect and permissions remain scoped to the approved device.",
       "status": "in_progress",
-      "evidence": "The service verifies host-signed grants and limits identity, permissions and expiry. Revocation immediately rejects signaling and notifies both peers. Storage is currently ephemeral; OS-protected native storage and durable recovery remain."
+      "evidence": "Native Windows stores identity and grants with CurrentUser DPAPI; Android encrypts its store with a Keystore key. The host signs permissions and explicit reconnect consent. Actual client/service tests verify host-only restoration after restart and that a failed revocation request cannot restore a grant deleted locally. Android Keystore persistence and physical revocation acceptance remain pending."
     },
     {
       "id": "webrtc",
@@ -74,7 +74,7 @@
       "plan": "Negotiate encrypted video/audio and data channels; use STUN to attempt a direct connection and authenticate the device identity.",
       "acceptance": "An authorized session works across separate home and mobile networks.",
       "status": "in_progress",
-      "evidence": "Implemented signed offer/answer/candidate handling, WebRTC video/audio tracks, a permission-gated reliable input channel, heartbeats and cleanup. Client/service tests pass; real screen-stream and separate-network tests are not yet completed."
+      "evidence": "Implemented signed offer/answer/ICE, WebRTC video/audio and a permission-gated reliable input channel with heartbeat/cleanup. Native Windows-to-local-browser screen viewing connected through the public service. Physical Android and separate-network acceptance remain pending; no TURN relay is configured."
     },
     {
       "id": "relay",
@@ -91,8 +91,8 @@
       "title": "Make remote access visible and stoppable",
       "plan": "Show who is connected, active permissions and a persistent stop action. Release pressed input states and stop audio when access ends.",
       "acceptance": "Stopping a session promptly ends control and media, including when a client misbehaves.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Windows remote mode shows approved devices, permissions, connection status, remove-access and tray stop/quit actions, plus an emergency shortcut. The local browser test was explicitly disconnected and its controller tab closed. Physical audio/mic cleanup, background visibility and interruption tests remain pending."
     },
     {
       "id": "win-screen",
@@ -110,7 +110,7 @@
       "plan": "Map touch and trackpad gestures to mouse actions; support scrolling, dragging, right-click, Unicode text and Windows shortcuts.",
       "acceptance": "Typing, selection, drag and shortcuts work without stuck keys or duplicate input.",
       "status": "in_progress",
-      "evidence": "Native mouse/key mapping and atomic Unicode text batches are implemented. A live ASCII test correctly typed abcdefghijklmNOPQRSTUVWXYZ into a disposable Notepad tab. An earlier multilingual test produced replacement characters; Unicode remains unfinished and needs an isolated retest. Tests were stopped when another task used the desktop."
+      "evidence": "Fixed WinUI Unicode corruption by delivering balanced UTF-16 key pairs through a bounded, ordered, nonblocking queue. Final native-to-browser test delivered the exact 67-character combined fixture including emoji, Hindi and a queued second message. Disconnect stopped a later long input after its initial STOP prefix; the character count remained 72. Physical Android touch/keyboard/drag/shortcut acceptance remains pending."
     },
     {
       "id": "win-audio",
@@ -137,7 +137,7 @@
       "plan": "Extend tray lifecycle handling for internet sessions and offer opt-in start at sign-in. Show locked/asleep/unavailable status honestly.",
       "acceptance": "Minimize and X preserve sharing; explicit quit stops it. Startup recovery is tested after user sign-in.",
       "status": "in_progress",
-      "evidence": "Added a remote-mode tray window, close/minimize retention, explicit stop/quit and Ctrl+Alt+Shift+Esc emergency stop. The build passes; physical background-session verification remains."
+      "evidence": "Actual local testing verified minimize keeps the live screen stream active: the controller received a fresh BACKGROUND STREAM CHECK after the window hid. X also preserved the session. Fixed title-based activation and the remote window handler; reopening the same app restored its hidden window with the connection intact. Opt-in sign-in startup and real-phone background/audio tests remain pending."
     },
     {
       "id": "mac-permissions",
@@ -207,9 +207,9 @@
       "group": "05 · Android and iPhone companions",
       "title": "Build the Android controller app",
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
-      "acceptance": "A physical Android device controls both a Windows PC and a MacBook.",
+      "acceptance": "A physical Android device views and controls a Windows PC; MacBook acceptance is deferred.",
       "status": "in_progress",
-      "evidence": "Android companion builds successfully with SDK 37, Java 17 and minimum Android 8. Added Keystore-encrypted storage, native Ed25519 signatures, audio permission flow, shared controls, checksum-pinned Gradle wrapper and dependency notices. Four JVM tests verify signed JSON and an independently generated Node signature fixture. No physical phone test yet."
+      "evidence": "Android companion builds locally and on GitHub CI (run 42832703946), using SDK 37.0 and Java 17, minimum Android 8. Native signed JSON passes four JVM checks including a Node-generated Ed25519 vector. The signed APK is verified locally. Physical installation, Keystore persistence and screen/input/audio/microphone acceptance remain pending. Six additional shared peer tests now check Unicode payloads, view-only input denial, replay/wrong-display rejection and cleanup."
     },
     {
       "id": "ios",
@@ -225,9 +225,9 @@
       "group": "05 · Android and iPhone companions",
       "title": "Make mobile typing and shortcuts reliable",
       "plan": "Support phone keyboards, composition/IME, Unicode, editing keys and an extra toolbar for computer-only modifier keys.",
-      "acceptance": "Multilingual text, Backspace, Enter, selection and desktop shortcuts work on both hosts.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "acceptance": "Android text, Backspace, Enter, selection and desktop shortcuts work on Windows, including multilingual text.",
+      "status": "in_progress",
+      "evidence": "Shared typing and editing keys are implemented. Native Windows now paces Unicode delivery asynchronously; actual local browser-to-Windows testing passed multilingual text and two-message ordering. Cancellation and malformed text rejection pass automated checks. Android IME/composition and real phone keyboards remain unverified."
     },
     {
       "id": "mobile-audio",
@@ -235,8 +235,8 @@
       "title": "Add phone playback and microphone controls",
       "plan": "Add clearly labeled sound/microphone controls, native permission handling, mute indicators and interruption recovery.",
       "acceptance": "Phone microphone reaches the chosen host and host audio plays through the selected phone output.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Added host audio playback and explicit phone microphone toggle with Android runtime permission handling; camera access is denied. Windows native audio and VB-CABLE bridges are implemented. Three audio-worklet buffer/mixing tests pass. Audible Android and separate calling-app microphone tests remain pending."
     },
     {
       "id": "mobile-life",
@@ -244,8 +244,8 @@
       "title": "Handle phone backgrounding and network changes",
       "plan": "Follow each mobile OS lifecycle; show paused/disconnected state when suspension prevents a session and reconnect when the app becomes active.",
       "acceptance": "Calls, app switching, screen locking and Wi-Fi/mobile-data changes do not leave stale control active.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Android onPause releases input, closes the remote peer and stops phone microphone capture. Foreground return retries only when trusted reconnect was approved. WebSocket service reconnect/backoff is implemented. Physical app switching, screen lock, calls and Wi-Fi/mobile-data tests remain pending."
     },
     {
       "id": "phone-sharing",
@@ -263,7 +263,7 @@
       "plan": "Use heartbeats and presence expiry to show PC offline / waiting to reconnect, with last-known status and Reconnect now.",
       "acceptance": "Disconnect the computer internet while the phone stays online; the phone shows the correct state.",
       "status": "in_progress",
-      "evidence": "Implemented host-offline and phone-offline states in the executable recovery policy. Fake-clock outage tests pass. Presence heartbeat integration and the actual phone status screen are not built yet."
+      "evidence": "Presence events and peer heartbeats are connected to the shared UI, including PC offline/waiting and service-retry statuses. Recovery-policy tests and real service socket presence tests pass. Physically removing Windows internet while Android remains online is still required."
     },
     {
       "id": "reconnect",
@@ -272,7 +272,7 @@
       "plan": "Retry with bounded backoff, renew transport and relay credentials, and authenticate the previously approved device. Keep session IDs and stale attempts isolated.",
       "acceptance": "Restore the computer internet and resume without a fresh key when trusted reconnect was approved.",
       "status": "in_progress",
-      "evidence": "Implemented a tested recovery policy with 15-second attempt timeout, capped exponential backoff, Reconnect now and rejection of stale success/close callbacks. A simulated host internet outage recovers with the prior approved grant. WebRTC/service/native integration and physical internet tests remain."
+      "evidence": "Implemented capped service retry and permission-gated remote peer retries, fresh session IDs/generations and host-authorized restoration. A real HTTP/WebSocket client test successfully restored consent after restarting the broker. Physical WebRTC recovery after PC internet loss and phone network switching remains unverified."
     },
     {
       "id": "reconnect-consent",
@@ -281,7 +281,7 @@
       "plan": "Add Allow this trusted device to reconnect during initial approval. Respect revocation, expiry and view/input/microphone choices on every recovery.",
       "acceptance": "Untrusted or revoked devices need approval; reconnect never broadens the saved permissions.",
       "status": "in_progress",
-      "evidence": "The policy requires explicit reconnect consent, validates grant identity/revision/expiry and never expands permissions. Local tests cover revocation, expiry and reconnect-disabled behavior. Real identity verification, host storage and approval UI remain unimplemented."
+      "evidence": "Initial Windows pairing includes Allow this trusted phone to reconnect. Signed grants bind identities, permissions, expiry and consent. Windows DPAPI and Android Keystore adapters are implemented. Tests reject reconnect without consent, expired/revoked grants and expanded permissions. Physical permission/recovery acceptance remains pending."
     },
     {
       "id": "network",
@@ -299,7 +299,7 @@
       "plan": "Release pressed keys/buttons, restore cursor ownership, reset audio buffers and establish a clean stream on reconnect. Require fresh mic consent if needed.",
       "acceptance": "Interrupt a session during a drag, key press and microphone use; no stuck state or old audio survives.",
       "status": "in_progress",
-      "evidence": "Every policy drop emits transport cancellation, release-input, restore-pointer and stop-media effects. Local tests verify cleanup order and stale-session isolation. Native adapters must still execute these actions; physical drag/key/microphone interruption tests are pending."
+      "evidence": "Windows text is now queued asynchronously with a cancellation lifetime; stop clears pending text and releases pressed keys/buttons. The actual local test stopped a long message after its STOP prefix and the character count remained unchanged afterward. Automated queue ordering, cancellation and new-session isolation checks pass. Physical phone drag/key/audio/mic interruption tests remain pending."
     },
     {
       "id": "restart",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Built the 0.9.0 Windows installer with the verified Microsoft offline runtime included. GitHub clean-runner build/install/reinstall/desktop shortcut/uninstall checks passed for d5ccc68 (run 42830951463). The Android release APK is built and signature-verified locally; four JVM tests pass. Android CI failed because its SDK setup requested Google’s removed tools package; the workflow is being corrected. Physical phone and Unicode acceptance remain pending."
+      "evidence": "Windows preview installer with the Microsoft offline runtime passed GitHub build/install/reinstall/shortcut/uninstall checks (run 42830951463). Android companion build and four native contract tests now pass GitHub CI (run 42832703946). The release APK is signed and verified locally. The preview download upload is in progress; physical phone and Unicode acceptance remain pending."
     },
     {
       "id": "regression",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "The latest local service/client/protocol/recovery/audio-buffer suite passes 74 tests. Previous suite d4427dd passed Windows, macOS and Linux CI. Includes real HTTP/WebSocket pairing, signature/replay rejection, host-authorized restoration after an actual broker restart and failed-network revocation. Full physical internet acceptance remains in the parent task."
+      "evidence": "80 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The prior suite passed Windows, macOS and Linux CI. Covers actual broker restart recovery, durable failed-network revocation, signed/replay-gated signaling, full Unicode peer payloads and cleanup/backpressure cases. Physical internet/Android acceptance remains in the parent tasks."
     },
     {
       "id": "native-protected-identity",
@@ -389,7 +389,7 @@
       "plan": "Protect identity keys and grants with Windows DPAPI and make native signed JSON match the shared service contract.",
       "acceptance": "Identity persists across reload, corrupt data fails closed, and the service verifies a native signature.",
       "status": "done",
-      "evidence": "CurrentUser DPAPI identity/grant storage and native Ed25519 signing are implemented. All 88 Windows checks passed, including identity persistence, corruption rejection and Unicode signature verification by Node. This completion covers identity/signing only."
+      "evidence": "CurrentUser DPAPI identity/grant storage and native Ed25519 signing are implemented. The latest Windows suite passes 92 local checks, including identity persistence, corruption rejection and native Unicode signing verified by Node. This completed task covers identity/signing only."
     },
     {
       "id": "free-preview-host",
@@ -416,7 +416,7 @@
       "plan": "Build a single APK using a private, stable release identity kept outside Git; verify its Android package signature and native signing contract.",
       "acceptance": "A release APK is built and apksigner verification succeeds; native signed JSON passes its independent contract tests.",
       "status": "done",
-      "evidence": "Built DeviceBridge-Android-0.9.0-preview.apk locally and verified its APK v2 signature. The private signing identity remains outside the repository. Four JVM tests pass for Unicode/surrogate canonical JSON, safe numbers and the Node-generated Ed25519 vector. Phone installation and functional acceptance remain unchecked."
+      "evidence": "Built and signature-verified DeviceBridge-Android-0.9.0-preview.apk with the private release identity outside Git. Four JVM canonical JSON/Ed25519 contract tests pass locally and on GitHub; clean Linux Android CI run 42832703946 now builds the debug artifact successfully. Physical phone installation remains unchecked."
     },
     {
       "id": "windows-installer-ci",
@@ -426,7 +426,25 @@
       "acceptance": "The runtime-bundled installer compiles and all isolated installer checks pass without changing the user’s stable installation.",
       "status": "done",
       "evidence": "GitHub Windows run 42830951463 passed for commit d5ccc68, including 88 regression checks, native signature verification and installer install/reinstall/desktop shortcut/uninstall checks. The offline runtime vendor signature is Valid; runtime bytes are recorded in bundled-runtime.json. The already-installed-runtime path was tested; installing that dependency on a machine where it is absent still needs coverage. DeviceBridge code signing remains deferred."
+    },
+    {
+      "id": "windows-unicode-input",
+      "group": "03 · Windows remote host",
+      "title": "Fix and verify native Windows Unicode typing",
+      "plan": "Trace text corruption, preserve ordering with a nonblocking input queue, pace balanced key pairs and cancel pending input when sharing stops.",
+      "acceptance": "An approved local controller sends full multilingual text and queued messages correctly; disconnect cancels the remaining input.",
+      "status": "done",
+      "evidence": "Final runtime test delivered DeviceBridge remote typing test — hello 👋 नमस्ते followed by a queued second message and check mark: 67 UTF-16 units matched exactly in Notepad. A subsequent disconnect left only the initial STOP prefix; the count remained 72 on a later read. All 92 Windows checks pass, including queue ordering, malformed UTF-16 rejection, cancellation and fresh-session isolation. This is a local controller test, not physical Android acceptance."
+    },
+    {
+      "id": "windows-background-preview",
+      "group": "03 · Windows remote host",
+      "title": "Verify remote sharing survives minimize and X, and can reopen",
+      "plan": "Test live screen updates after hiding the window, then restore it through a normal second launch without dropping the approved connection.",
+      "acceptance": "Fresh screen content arrives after minimize; X retains the connection; a normal app launch restores the existing window.",
+      "status": "done",
+      "evidence": "Actual local preview test received a fresh BACKGROUND STREAM CHECK image after minimize. X preserved Connected status. Fixed remote-title lookup and RestoreSession handling, then verified normal relaunch brought back the same remote window while still connected. The controller was disconnected and all temporary test grants were removed afterward. Startup-at-sign-in remains separate and unfinished."
     }
   ],
-  "stage": "Windows + Android preview: 88 Windows checks, 74 shared/service tests and 4 Android contract tests pass locally. The offline-runtime Windows installer passed isolated GitHub install/reinstall/shortcut/uninstall checks. Signed Android APK built; Android CI SDK setup is being fixed. Native screen and ASCII typing worked locally; Unicode and physical phone acceptance remain unfinished."
+  "stage": "Windows + Android preview: Unicode typing, queued-message ordering, disconnect cancellation, and minimize/X/reopen now pass local runtime tests. 92 Windows checks, 80 shared/service tests and 4 Android contract tests pass locally. Physical Android, separate-network, audio and outage acceptance remain unfinished. The large Windows preview upload is moving to GitHub CI after local uploads timed out."
 }

@@ -8,7 +8,51 @@ namespace DeviceBridge;
 internal sealed class RemoteInput : IDisposable
 {
     readonly InputBridge input = new(_ => false);
+    readonly object gate = new();
+    readonly Queue<(JsonElement Value, Rectangle Bounds, CancellationToken Token, int Cost)> pending = new();
+    CancellationTokenSource? lifetime = new();
+    bool draining, disposed;
+    int pendingBytes;
+    readonly Func<string, CancellationToken, Task>? textOverride;
+    readonly Action<JsonElement, Rectangle>? immediateOverride;
+    public event Action<string>? Failed;
+    internal Task Completion { get; private set; } = Task.CompletedTask;
+    internal RemoteInput(Func<string, CancellationToken, Task>? textOverride = null, Action<JsonElement, Rectangle>? immediateOverride = null) { this.textOverride = textOverride; this.immediateOverride = immediateOverride; }
     public void Apply(JsonElement value, Rectangle bounds)
+    {
+        if (value.GetProperty("type").GetString() == "release-all") { Release(); return; }
+        bool start; int cost = Encoding.UTF8.GetByteCount(value.GetRawText());
+        lock (gate)
+        {
+            ObjectDisposedException.ThrowIf(disposed, this);
+            if (pending.Count >= 128 || cost > 32768 - pendingBytes) throw new IOException("Too much queued remote input. Stop sharing and reconnect.");
+            pending.Enqueue((value.Clone(), bounds, lifetime!.Token, cost)); pendingBytes += cost;
+            start = !draining; if (start) draining = true;
+        }
+        if (start) Completion = DrainAsync();
+    }
+    async Task DrainAsync()
+    {
+        while (true)
+        {
+            (JsonElement Value, Rectangle Bounds, CancellationToken Token, int Cost) item;
+            lock (gate) { if (!pending.TryDequeue(out item)) { draining = false; return; } pendingBytes -= item.Cost; }
+            try
+            {
+                item.Token.ThrowIfCancellationRequested();
+                if (item.Value.GetProperty("type").GetString() == "text")
+                {
+                    var text = item.Value.GetProperty("text").GetString()!;
+                    if (textOverride != null) await textOverride(text, item.Token); else await WriteTextAsync(text, item.Token);
+                }
+                else if (immediateOverride != null) immediateOverride(item.Value, item.Bounds);
+                else ApplyImmediate(item.Value, item.Bounds);
+            }
+            catch (OperationCanceledException) when (item.Token.IsCancellationRequested) { }
+            catch (Exception error) { Release(); Failed?.Invoke(error.Message); }
+        }
+    }
+    void ApplyImmediate(JsonElement value, Rectangle bounds)
     {
         var type = value.GetProperty("type").GetString();
         if (type == "pointer")
@@ -31,7 +75,7 @@ internal sealed class RemoteInput : IDisposable
         else if (type == "text")
         {
             var text = value.GetProperty("text").GetString()!; if (text.Length == 0 || Encoding.UTF8.GetByteCount(text) > 4096 || text.Contains('\0')) throw new IOException("Invalid typed text.");
-            WriteText(text);
+            throw new IOException("Text must use the paced input queue.");
         }
         else if (type == "release-all") input.ReleaseAll(); else throw new IOException("Invalid input event.");
     }
@@ -49,25 +93,37 @@ internal sealed class RemoteInput : IDisposable
         };
     }
     internal readonly record struct TextEvent(char Unit, bool Up);
-    internal static void WriteText(string text, Func<TextEvent[], uint>? sink = null)
+    internal static async Task WriteTextAsync(string text, CancellationToken token, Func<TextEvent[], uint>? sink = null, Func<CancellationToken, Task>? pause = null)
     {
-        if (text.Length == 0 || Encoding.UTF8.GetByteCount(text) > 4096 || text.Contains('\0')) throw new IOException("Invalid typed text.");
-        var events = text.SelectMany(c => new[] { new TextEvent(c, false), new TextEvent(c, true) }).ToArray();
-        uint sent;
-        if (sink != null) sent = sink(events);
-        else
+        if (text.Length == 0 || new UTF8Encoding(false, true).GetByteCount(text) > 4096 || text.Contains('\0')) throw new IOException("Invalid typed text.");
+        // WinUI text controls can overwrite queued VK_PACKET characters when a
+        // whole paragraph is injected at once. Emit balanced UTF-16 key pairs,
+        // yield to the app between them, and cancel immediately on disconnect.
+        foreach (char unit in text)
         {
-            var commands = events.Select(e => new NativeInput { type = 1, union = new NativeUnion { keyboard = new Keyboard { scan = e.Unit, flags = 4u | (e.Up ? 2u : 0) } } }).ToArray();
-            // SendInput inserts a batch serially without interleaving other input.
-            sent = SendInput((uint)commands.Length, commands, Marshal.SizeOf<NativeInput>());
+            token.ThrowIfCancellationRequested();
+            var events = new[] { new TextEvent(unit, false), new TextEvent(unit, true) };
+            uint sent;
+            if (sink != null) sent = sink(events);
+            else
+            {
+                var commands = events.Select(e => new NativeInput { type = 1, union = new NativeUnion { keyboard = new Keyboard { scan = e.Unit, flags = 4u | (e.Up ? 2u : 0) } } }).ToArray();
+                sent = SendInput((uint)commands.Length, commands, Marshal.SizeOf<NativeInput>());
+            }
+            if (sent != events.Length) throw new Win32Exception("Windows could not finish remote typing on this screen.");
+            if (pause != null) await pause(token); else await Task.Delay(50, token);
         }
-        if (sent != events.Length) throw new Win32Exception("Windows could not finish remote typing on this screen.");
     }
     [StructLayout(LayoutKind.Sequential)] struct Keyboard { public ushort vk, scan; public uint flags, time; public nuint extra; }
     [StructLayout(LayoutKind.Sequential)] struct Mouse { public int x, y; public uint data, flags, time; public nuint extra; }
     [StructLayout(LayoutKind.Explicit)] struct NativeUnion { [FieldOffset(0)] public Keyboard keyboard; [FieldOffset(0)] public Mouse mouse; }
     [StructLayout(LayoutKind.Sequential)] struct NativeInput { public uint type; public NativeUnion union; }
     [DllImport("user32.dll", SetLastError = true)] static extern uint SendInput(uint count, NativeInput[] input, int size);
-    public void Release() => input.ReleaseAll();
-    public void Dispose() => input.Dispose();
+    public void Release()
+    {
+        lock (gate) { pending.Clear(); pendingBytes = 0; var prior = lifetime; lifetime = disposed ? null : new(); prior?.Cancel(); prior?.Dispose(); }
+        input.ReleaseAll();
+    }
+    public void Dispose() { lock (gate) { if (disposed) return; disposed = true; } Release(); input.Dispose(); }
+
 }

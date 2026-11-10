@@ -31,7 +31,8 @@ internal sealed class RemoteHostForm : Form
     public RemoteHostForm(bool designPreview = false)
     {
         this.designPreview = designPreview;
-        Text = AppActivation.Title + " · Remote preview"; Icon = AppActivation.Icon; ClientSize = new Size(1020, 790); MinimumSize = new Size(780, 620); StartPosition = FormStartPosition.CenterScreen;
+        Text = AppActivation.RemoteTitle; Icon = AppActivation.Icon; ClientSize = new Size(1020, 790); MinimumSize = new Size(780, 620); StartPosition = FormStartPosition.CenterScreen;
+        input.Failed += message => { EmergencyStop(); Post(new { type = "native-error", message }); };
         Controls.Add(web); var menu = new ContextMenuStrip(); menu.Items.Add("Open DeviceBridge", null, (_, _) => RestoreWindow());
         menu.Items.Add("Stop remote sharing", null, (_, _) => EmergencyStop()); menu.Items.Add("Back to local sharing", null, (_, _) => CloseToWelcome());
         menu.Items.Add("Disconnect and quit", null, (_, _) => { QuitRequested = true; Close(); });
@@ -45,7 +46,7 @@ internal sealed class RemoteHostForm : Form
     void CloseToWelcome() { returnToWelcome = true; StopCapture(); Close(); }
     public void RestoreWindow() { WindowState = FormWindowState.Normal; Show(); Activate(); }
     protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); RegisterHotKey(Handle, 41, 1 | 2 | 4, (uint)Keys.Escape); }
-    protected override void WndProc(ref Message message) { if (message.Msg == 0x312 && message.WParam == 41) EmergencyStop(); base.WndProc(ref message); }
+    protected override void WndProc(ref Message message) { if ((uint)message.Msg == AppActivation.RestoreMessage) { RestoreWindow(); return; } if (message.Msg == 0x312 && message.WParam == 41) EmergencyStop(); base.WndProc(ref message); }
     void EmergencyStop() { StopCapture(); Post(new { type = "native-stop" }); }
     async Task InitializeAsync()
     {
@@ -120,7 +121,7 @@ internal sealed class RemoteHostForm : Form
                     if (!Matches(request) || !allowInput) throw new IOException("Remote input is not authorized.");
                     if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= grantExpiresAt) { StopCapture(); throw new IOException("Remote approval expired."); }
                     var command = request.GetProperty("input"); if (command.GetProperty("type").GetString() == "pointer" && command.GetProperty("point").GetProperty("displayId").GetString() != displayId) throw new IOException("Wrong remote display.");
-                    input.Apply(command, captureBounds); break;
+                    try { input.Apply(command, captureBounds); } catch { EmergencyStop(); throw; } break;
                 default: throw new IOException("Unsupported remote action.");
             }
             if (rpcId != null) Post(new { rpcId, result });

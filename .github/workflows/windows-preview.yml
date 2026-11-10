@@ -1,0 +1,65 @@
+name: Publish tested Windows preview asset
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing unpublished preview tag
+        required: true
+        type: string
+      source_ref:
+        description: Exact 40-character source commit
+        required: true
+        type: string
+permissions:
+  contents: read
+jobs:
+  windows:
+    runs-on: windows-latest
+    timeout-minutes: 30
+    permissions:
+      contents: write
+    defaults:
+      run:
+        shell: pwsh
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.source_ref }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+      - name: Build the self-contained Windows preview
+        run: ./app/DeviceBridge/Build.ps1 -Portable
+      - name: Run Windows regression and signature checks
+        run: |
+          $exe = Join-Path $PWD 'app/DeviceBridge/portable/DeviceBridge.exe'
+          $process = Start-Process -FilePath $exe -ArgumentList '--self-test' -PassThru -Wait -WindowStyle Hidden
+          Get-Content app/DeviceBridge/portable/self-test-result.txt
+          if ($process.ExitCode -ne 0) { throw 'Windows regression checks failed.' }
+          node remote/scripts/verify-native.mjs app/DeviceBridge/portable/remote-contract-result.json
+          if ($LASTEXITCODE -ne 0) { throw 'Native signature verification failed.' }
+      - name: Build and test the offline-runtime installer
+        run: |
+          ./app/DeviceBridge/Build-Installer.ps1 -SkipPublish
+          $setup = Get-ChildItem app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe | Select-Object -First 1
+          ./app/DeviceBridge/Test-Installer.ps1 -Installer $setup.FullName
+      - name: Upload verified Windows assets to the unpublished preview
+        run: node scripts/publish-windows-preview.mjs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEVICEBRIDGE_PREVIEW_TAG: ${{ inputs.tag }}
+          DEVICEBRIDGE_SOURCE_REF: ${{ inputs.source_ref }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: DeviceBridge-Windows-preview-${{ inputs.source_ref }}
+          retention-days: 1
+          path: |
+            app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe
+            app/DeviceBridge/installer-output/SHA256.txt
+            app/DeviceBridge/installer-output/bundled-runtime.json
+            app/DeviceBridge/portable/self-test-result.txt
+          if-no-files-found: warn
