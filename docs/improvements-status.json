@@ -208,8 +208,8 @@
       "title": "Build the Android controller app",
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device views and controls a Windows PC; MacBook acceptance is deferred.",
-      "status": "in_progress",
-      "evidence": "The physical Android preview APK installs and opens. Windows approval succeeded, and after clearing an accidentally interrupted one-session approval and pairing afresh, the user confirmed the PC screen appears on the phone. Touch/Unicode typing, audio, background and outage acceptance are being tested separately."
+      "status": "done",
+      "evidence": "The physical Android app installs, pairs after Windows approval and displays the Windows screen. The user confirmed basic text control by sending these chat prompts from the phone. After installing Android preview 7 through App updates, the user reported that everything in their current setup is working. This completes basic Android-to-Windows viewing and control; microphone routing, separate-network use and outage recovery retain their own acceptance checks."
     },
     {
       "id": "ios",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Preview 7 is published with the same Android publisher identity and version code 907, installable through preview 6 App updates. Windows passes 92 checks and isolated installation tests. The user already confirmed the preview 6 manual upgrade preserved the saved PC and its live update check worked. The 6-to-7 in-app installation is the next physical acceptance step."
+      "evidence": "Preview 7 is published with Android version code 907 and the same publisher identity. The user confirmed installing it through App updates. Windows preview 7 passes 92 checks and isolated installation tests. Read-only inspection on 2026-11-11 found this PC still running Windows preview 4 (product source b78df59), with an approved phone listed and Connected — your computer is ready. The user reported the current setup working, so no Windows update or restart was performed."
     },
     {
       "id": "regression",
@@ -488,7 +488,7 @@
       "plan": "Add automatic update checking, in-app download and verified Android installer handoff. Publish a versioned release descriptor; refresh the public update feed automatically after GitHub releases.",
       "acceptance": "After the one-time manual upgrade from the older app, the phone detects a later release, downloads it inside the app and installs it after Android approval while preserving saved devices.",
       "status": "in_progress",
-      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install. Signed preview 6 (version code 906) is published with its release descriptor. GitHub release events automatically refresh the Android update feed; the physical update handoff remains pending. The user installed preview 6 over the existing app, confirmed App updates is visible, checked the live feed successfully and confirmed the saved PC remained listed. Installing a later release through this updater is the next acceptance check."
+      "evidence": "Implemented native update download/install with size, SHA-256, package, version and publisher validation, private-cache FileProvider and Android approval. Five update-feed tests and nine native tests pass. The user confirmed preview 6 showed App updates, checked the live feed and preserved the saved PC. The user then installed preview 7 through App updates and confirmed version 0.9.0 preview 7 on their physical phone, followed by a working-setup report. Explicit saved-device preservation across the 6-to-7 update remains to be recorded."
     },
     {
       "id": "android-update-policy",
@@ -515,7 +515,7 @@
       "plan": "Use Android immersive fullscreen, keep the computer screen fitted to the available area, place touch/right-click/scroll/sound/microphone/shortcut controls in a hamburger Tools menu, and keep text plus Send at the bottom.",
       "acceptance": "On a physical Android phone, fullscreen opens/exits, Tools exposes every existing control, and text/Send remain usable in both orientations with the keyboard open.",
       "status": "in_progress",
-      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending. The final bundle also distinguishes unavailable microphone permission from missing Windows routing setup, and disables audio controls when the effective grant does not allow them. Native Android compilation and nine native tests pass; shared coverage is now 95 tests. Preview 7 is being packaged for delivery through the preview 6 updater. Published in preview 7 with the signed APK and in-app update descriptor. Physical phone fullscreen/rotation/keyboard acceptance is next."
+      "evidence": "Published in preview 7 with fullscreen, overlay Tools, fixed typing/Send, immersive Android system bars, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Browser layout checks pass at 390×844, 844×390 and 390×420. Nine Android native tests and 95 shared tests pass. The user confirmed preview 7 is installed and the current setup works. Specific physical rotation, keyboard-open and fullscreen-exit acceptance remains separate."
     },
     {
       "id": "frontend-separation",
@@ -542,7 +542,7 @@
       "plan": "Check the active host permission grant and effective audio capability. Explain missing permission or driver setup clearly, then test the phone microphone after explicit Windows approval.",
       "acceptance": "The phone microphone control is available for an approved microphone grant and a Windows recording app receives the phone audio.",
       "status": "in_progress",
-      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet. Added an explicit phone-side explanation for a microphone not included in the grant and a separate setup instruction when the host approved it but native routing is unavailable. These messages do not bypass host consent. A fresh microphone-approved physical test is still pending. Read-only native endpoint enumeration on this PC found no active VB-CABLE playback endpoint. No recording or playback was started. The included driver needs one-time setup/restart before a fresh host-approved microphone test."
+      "evidence": "Preview 7 explains absent microphone consent separately from unavailable native routing. An earlier test grant allowed view/input only; on 2026-11-11 the Windows UI showed an approved phone with view, input, speaker, microphone and trusted reconnect, so the old grant limitation no longer describes that saved device. Earlier read-only endpoint enumeration found no active VB-CABLE playback endpoint on this PC. No recording/playback or driver installation was performed by the agent. The user later reported the setup working in general; a specific Windows recording-app test of phone microphone audio remains unverified."
     },
     {
       "id": "fullscreen-layout-checks",
@@ -554,5 +554,5 @@
       "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
     }
   ],
-  "stage": "Vercel frontend is live and download integrity is verified. Fullscreen preview 7 is published for installation through Android App updates. Phone preview 6 preserved its saved PC and update checks work. Microphone diagnosis: current grant omitted microphone and this PC has no active virtual routing endpoint; included driver setup/restart and fresh approval are required. Fullscreen, updater-install and audio physical acceptance are pending."
+  "stage": "The user confirmed Android preview 7 installed through App updates and reported their current setup working. Windows inspection shows Connected with an approved phone saved; this PC still runs preview 4. No update, disconnect or restart was performed. Vercel frontend and verified downloads are live. Specific microphone, fullscreen rotation/keyboard, device removal, separate-network and outage tests remain open; Mac/iPhone stay deferred."
 }
