@@ -15,7 +15,10 @@ if(!tag.startsWith('v'+version+'-preview.'))throw Error('Preview tag and Windows
 const token=process.env.GH_TOKEN;if(!token)throw Error('Workflow upload token is missing.');
 const headers={Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'DeviceBridge-preview-CI'};
 async function api(route){const response=await fetch('https://api.github.com/repos/'+repository+'/'+route,{headers,signal:AbortSignal.timeout(30000)});const value=await response.json();if(!response.ok)throw Error('GitHub request failed: '+response.status);return value;}
-let release=await api('releases/tags/'+tag);
+// An unpublished draft need not have a Git tag yet. Find it in the authenticated
+// release listing instead of the published-release-by-tag endpoint.
+let release=(await api('releases?per_page=100')).find(item=>item.tag_name===tag);
+if(!release)throw Error('The source-pinned preview draft was not found.');
 if(!release.draft||!release.prerelease||release.target_commitish!==source)throw Error('An unpublished preview draft for this exact commit must already exist.');
 const filename='DeviceBridge-Setup-'+version+'.exe',directory='app/DeviceBridge/installer-output',file=path.join(directory,filename),bytes=fs.readFileSync(file);
 if(bytes.length<20*1024*1024||bytes.length>512*1024*1024||bytes.toString('ascii',0,2)!=='MZ')throw Error('Invalid Windows installer.');
@@ -26,7 +29,14 @@ for(const [name,filePath,expected]of [[filename,file,digest],['SHA256-Windows.tx
  release=await api('releases/'+release.id);if(!release.draft)throw Error('Preview was published while the build was running.');
  const existing=release.assets.find(asset=>asset.name===name);
  if(existing){if(existing.state!=='uploaded'||existing.digest!==wanted||existing.size!==content.length)throw Error('The draft already contains a different '+name);}
- else execFileSync('gh',['release','upload',tag,filePath,'--repo',repository],{stdio:'inherit',timeout:600000});
+ else {
+  const url=new URL(release.upload_url.replace(/\{.*\}$/,''));
+  if(url.origin!=='https://uploads.github.com'||url.pathname!==`/repos/${repository}/releases/${release.id}/assets`)throw Error('Unexpected upload destination.');
+  url.searchParams.set('name',name);
+  const response=await fetch(url,{method:'POST',headers:{...headers,'Content-Type':'application/octet-stream','Content-Length':String(content.length)},body:content,signal:AbortSignal.timeout(240000)});
+  if(!response.ok)throw Error('Preview upload failed: '+response.status);
+  await response.json();
+ }
  const saved=(await api('releases/'+release.id)).assets.find(asset=>asset.name===name);
  if(saved?.state!=='uploaded'||saved.digest!==wanted||saved.size!==content.length)throw Error('Uploaded asset integrity failed: '+name);
  console.log('Verified preview asset: '+name+' · '+content.length+' bytes · '+wanted);
