@@ -22,10 +22,10 @@ for (const name of ['release.json', 'test-release.json']) {
   if (bytes !== m.bytes || hash.digest('hex') !== m.sha256) throw new Error(`${name}: EXE integrity failed`);
   console.log(`${name}: ${m.filename}, ${bytes} bytes, SHA-256 verified`);
 }
-for (const name of ['index.html', 'test.html', 'credits.html']) {
+for (const name of ['index.html', 'test.html', 'credits.html', 'remote-preview.html', 'improvements.html']) {
   const path = resolve(root, name);
   const html = (await localFile(path)).toString();
-  if (name !== 'credits.html') {
+  if (['index.html', 'test.html'].includes(name)) {
     const manifest = JSON.parse(await localFile(resolve(root, name === 'test.html' ? 'test-release.json' : 'release.json')));
     const versions = [...html.matchAll(/data-release-version>([^<]*)</g)].map(m => m[1]);
     if (!versions.length || versions.some(v => v !== manifest.version)) throw new Error(`${name}: visible versions differ from the download`);
@@ -39,3 +39,12 @@ for (const name of ['index.html', 'test.html', 'credits.html']) {
   }
   console.log(`${name}: local links and assets verified`);
 }
+const preview=JSON.parse(await localFile(resolve(root,'remote-preview.json')));
+const previewPage=(await localFile(resolve(root,'remote-preview.html'))).toString();
+if(!/^v\d+\.\d+\.\d+-preview\.\d+$/.test(preview.tag)||!/^[a-f0-9]{40}$/.test(preview.source))throw Error('Preview source identity is invalid');
+for(const [platform,extension] of [['windows','.exe'],['android','.apk']]){
+  const asset=preview[platform];
+  const expected='https://github.com/Satish01-oss/Drive-Bridge/releases/download/'+preview.tag+'/'+asset.filename;
+  if(!asset.filename.endsWith(extension)||asset.url!==expected||!/^[a-f0-9]{64}$/.test(asset.sha256)||!(asset.bytes>0)||!previewPage.includes('href="'+asset.url+'"'))throw Error('Preview download metadata mismatch: '+platform);
+}
+console.log('Preview links match source-pinned release metadata');

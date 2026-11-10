@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#19372d">
+  <title>Windows + Android preview · DeviceBridge</title>
+  <style>
+    :root{font-family:system-ui,-apple-system,Segoe UI,sans-serif;background:#f4f6ee;color:#19372d}*{box-sizing:border-box}body{margin:0}a{color:inherit}header,main,footer{max-width:1040px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;gap:18px;align-items:center;border-bottom:1px solid #d9e1d2}header>a{font-size:24px;font-weight:800;text-decoration:none;letter-spacing:-1px}nav{display:flex;gap:18px;font-size:13px}main{padding-top:64px}.badge{display:inline-block;background:#e0efb5;border-radius:30px;padding:8px 12px;font-size:11px;font-weight:750;letter-spacing:.09em}h1{font-size:clamp(39px,7vw,72px);line-height:1.05;letter-spacing:-.055em;max-width:800px;margin:22px 0}p{line-height:1.65;color:#586c5b}.intro{max-width:660px;font-size:18px}.downloads{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:40px 0}article,section{border:1px solid #d8e1d0;background:#fff;border-radius:20px;padding:28px}h2{margin-top:0;font-size:24px;letter-spacing:-.7px}h3{margin:0 0 8px;font-size:17px}.button{display:inline-block;background:#19372d;color:white;font-size:15px;font-weight:650;text-decoration:none;border-radius:10px;padding:14px 20px;margin:8px 0}.small{font-size:12px;overflow-wrap:anywhere}.version{font-weight:700;font-size:12px;letter-spacing:.04em}.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;counter-reset:steps;margin:28px 0 0;padding:0;list-style:none}.steps li:before{counter-increment:steps;content:counter(steps);display:block;margin-bottom:18px;background:#e4efce;border-radius:50%;width:30px;line-height:30px;text-align:center;font-size:13px;font-weight:700}.steps p{font-size:14px}.note{margin-top:22px;background:#eaf0df}.note p:last-child{margin-bottom:0}footer{display:flex;justify-content:space-between;gap:18px;font-size:12px;color:#586c5b;padding-top:36px;padding-bottom:40px}a:focus-visible{outline:3px solid #91ba43;outline-offset:4px}@media(max-width:640px){header,main,footer{padding:20px}main{padding-top:38px}header>a{font-size:21px}nav{gap:12px;font-size:12px}.downloads,.steps{grid-template-columns:1fr}.downloads{margin:28px 0}article,section{padding:23px}.steps{gap:16px}.steps li:before{margin-bottom:10px}footer{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <header><a href="index.html">DeviceBridge</a><nav><a href="improvements.html">Live checklist</a><a href="index.html">Stable Windows app</a></nav></header>
+  <main>
+    <span class="badge">WINDOWS + ANDROID · PREVIEW 4</span>
+    <h1>Your computer.<br>In your hand.</h1>
+    <p class="intro">Help test the new way to view and control your Windows PC from Android. One installer on your PC. One app on your phone.</p>
+    <div class="downloads">
+      <article>
+        <p class="version">WINDOWS · 0.9.0 PREVIEW</p>
+        <h2>On your computer</h2>
+        <p>Install DeviceBridge, then choose <strong>Control this PC from Android</strong>. The installer includes the app runtime.</p>
+        <a class="button" href="https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.4/DeviceBridge-Setup-0.9.0.exe">Download Windows installer</a>
+        <p class="small">Windows 10/11 · x64 · About 268 MiB<br>Updates the installed app; local Windows sharing stays available.</p>
+      </article>
+      <article>
+        <p class="version">ANDROID · 0.9.0 PREVIEW</p>
+        <h2>On your phone</h2>
+        <p>Install the Android companion and open DeviceBridge. It will ask for the connection key shown on your PC.</p>
+        <a class="button" href="https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.4/DeviceBridge-Android-0.9.0-preview.apk">Download Android app</a>
+        <p class="small">Android 8 or newer · About 3.1 MB<br>APK preview, signed for app updates. It is not on Google Play yet.</p>
+      </article>
+    </div>
+    <section>
+      <h2>Pair once. Approve on your PC.</h2>
+      <ol class="steps">
+        <li><h3>Get your key</h3><p>On Windows, choose what to share and tap <strong>Generate connection key</strong>.</p></li>
+        <li><h3>Enter six characters</h3><p>Type that key into the Android app. There are no router settings or server addresses to enter.</p></li>
+        <li><h3>Allow your phone</h3><p>On the PC, review the request and tap <strong>Allow this phone</strong>. Trusted reconnect is optional.</p></li>
+      </ol>
+      <p class="small">Closing or minimizing the Windows preview keeps it in the tray. Use <strong>Stop remote sharing</strong> or <strong>Disconnect and quit</strong> from its tray menu to stop. The PC must be awake and online.</p>
+    </section>
+    <section class="note">
+      <h2>What we are testing</h2>
+      <p>Native Windows screen viewing, multilingual typing, queued text and disconnect cancellation passed local controller tests. Android installation, separate-network access, audio, phone microphone, long sessions and outage recovery still need physical-device acceptance.</p>
+      <p>Some networks may prevent a direct connection; a relay is not configured yet. The free preview service can take a minute to wake up. This preview is separate from the stable 0.8.0 Windows release.</p>
+      <p class="small">The Windows app is not code-signed yet, so SmartScreen may show a publisher warning. Android may ask whether to allow installing this APK. Keep system protections enabled; do not continue if your security software blocks it. Microphone routing uses the included VB-CABLE setup and may require a restart.</p>
+      <p><a href="improvements.html">See completed work and remaining tests →</a></p>
+    </section>
+  </main>
+  <footer><span>DeviceBridge · Preview 0.9.0 · build 4</span><a href="https://github.com/Satish01-oss/Drive-Bridge/releases/tag/v0.9.0-preview.4">Release notes and file checksums</a><a href="remote-preview.json">Build details</a><a href="remote-preview.json">Build details</a><a href="credits.html">Credits</a></footer>
+</body>
+</html>

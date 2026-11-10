@@ -47,7 +47,7 @@
       "plan": "Run a small authenticated HTTPS/WebSocket service for pairing, device availability and connection setup. Keep screen/audio content out of service logs.",
       "acceptance": "Two devices on different networks discover each other without opening router ports.",
       "status": "in_progress",
-      "evidence": "Free Render HTTPS/WebSocket signaling is live. The latest local suite passes 74 tests, including actual client reconnection after a broker restart and durable local revocation when a server call fails. Physical separate-network acceptance remains pending."
+      "evidence": "Free Render HTTPS/WebSocket signaling is live. All 84 shared/service/protocol/recovery/peer/audio tests pass, including actual broker restart recovery, durable revocation after network failure, and cancellation of delayed authorization after Stop. Physical separate-network acceptance remains pending."
     },
     {
       "id": "pair",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "The fixed Windows app and offline-runtime installer passed isolated GitHub build/regression/install/reinstall/shortcut/uninstall checks. Android release signing and native unit checks pass locally and in CI. A draft-tag handoff error prevented the preview uploader from finding a retargeted draft; publication is being retried with an explicitly preserved tag. New 84-test client bundle fixes must be included in both final installers before publication. Physical phone acceptance remains pending."
+      "evidence": "Published source-pinned prerelease v0.9.0-preview.4 with the 84-test client fixes in both apps. Windows passed 92 checks plus clean-runner installer install/reinstall/shortcuts/uninstall; Android release APK signature is verified and 4 native contract tests pass. Public assets have verified SHA-256 digests. Physical phone installation/update acceptance remains pending. Stable Windows stays 0.8.0."
     },
     {
       "id": "regression",
@@ -344,7 +344,7 @@
       "plan": "Run current regression checks and physical keyboard, mouse, sound, microphone and background-sharing tests after integration.",
       "acceptance": "The new remote mode does not regress existing Windows-to-Windows functionality.",
       "status": "in_progress",
-      "evidence": "All 88 Windows non-hardware checks pass locally. The prior integrated preview d4427dd also passed Windows installer install/reinstall/desktop shortcut/uninstall CI. Physical two-PC revalidation is still required."
+      "evidence": "All 92 Windows non-hardware checks pass, and the preview 4 installer passed isolated GitHub install/reinstall/desktop shortcut/uninstall checks. Physical two-PC local sharing revalidation is still required."
     },
     {
       "id": "cross-tests",
@@ -370,8 +370,8 @@
       "title": "Publish the new apps, guides and compatibility matrix",
       "plan": "Update the website with actual platform downloads, supported features and simple setup steps. Mark features complete only after release evidence is available.",
       "acceptance": "Public links download the tested signed builds and the checklist reflects actual verified outcomes.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Public Windows + Android preview 4 downloads, supported OS targets, pairing guide and verified build details are available at remote-preview.html. Stable Windows remains 0.8.0. Full release promotion requires physical Android, separate-network, audio and recovery acceptance."
     },
     {
       "id": "signed-broker-core",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "84 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The prior 80-test suite passed Windows, macOS and Linux CI. New tests reproduce and fix delayed approvals/signals after Stop, revocation during verification and approval arriving before its pairing HTTP response. Actual broker restart recovery, failed-network revocation and permission/replay gating remain covered. Physical internet/Android acceptance remains in the parent tasks."
+      "evidence": "84 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The 84-test suite passes locally; platform CI is checked separately. New tests reproduce and fix delayed approvals/signals after Stop, revocation during verification and approval arriving before its pairing HTTP response. Actual broker restart recovery, failed-network revocation and permission/replay gating remain covered. Physical internet/Android acceptance remains in the parent tasks."
     },
     {
       "id": "native-protected-identity",
@@ -444,7 +444,16 @@
       "acceptance": "Fresh screen content arrives after minimize; X retains the connection; a normal app launch restores the existing window.",
       "status": "done",
       "evidence": "Actual local preview test received a fresh BACKGROUND STREAM CHECK image after minimize. X preserved Connected status. Fixed remote-title lookup and RestoreSession handling, then verified normal relaunch brought back the same remote window while still connected. The controller was disconnected and all temporary test grants were removed afterward. Startup-at-sign-in remains separate and unfinished."
+    },
+    {
+      "id": "preview-downloads",
+      "group": "07 · Packaging, verification and release",
+      "title": "Publish verifiable Windows + Android preview downloads",
+      "plan": "Publish a source-pinned prerelease with the Windows installer, signed Android APK and SHA-256 sums. Keep stable Windows separate and provide a phone-friendly setup page.",
+      "acceptance": "Public release assets match the tested source and advertised hashes; the preview page clearly states unfinished acceptance tests.",
+      "status": "done",
+      "evidence": "Published v0.9.0-preview.4 from b78df59e89a046de37d00526e4a153598f699b63. GitHub Windows workflow 42850501916 passed build, 92 checks and clean installer tests; the signed APK contains the same latest client bundle. Both release assets and checksums are publicly available. The website advertises this as a preview; physical Android acceptance is still pending."
     }
   ],
-  "stage": "Windows + Android preview: multilingual/queued typing, stop cancellation and minimize/X/reopen pass local runtime tests. 92 Windows checks, 84 shared/service tests and 4 Android contract tests pass locally. Late-approval/signal races after Stop are fixed. Final preview packaging/publication and physical Android, separate-network, audio and outage acceptance remain unfinished."
+  "stage": "Windows + Android preview 4 is published. Local screen, multilingual queued typing, Stop cancellation, minimize/X and reopen tests passed. Automated coverage: 92 Windows, 84 shared/service and 4 Android contract checks. Next: physical Android installation, separate-network connection, sound/microphone and trusted outage recovery."
 }
