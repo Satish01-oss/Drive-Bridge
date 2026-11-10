@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Windows preview 0.9.0 builds and passes 88 non-hardware checks; earlier integrated Windows build d4427dd passed clean-runner installer install/reinstall/shortcut/uninstall CI. Android signed preview APK built and its signature verified locally. Four Android JVM contract tests pass. Latest offline-runtime Windows installer packaging and real-phone installation remain pending. The single-file Windows installer now builds at 280,527,045 bytes with the unchanged Microsoft offline WebView2 runtime; its vendor signature is Valid. Latest runtime-bundled installer clean-machine CI is pending."
+      "evidence": "Built the 0.9.0 Windows installer with the verified Microsoft offline runtime included. GitHub clean-runner build/install/reinstall/desktop shortcut/uninstall checks passed for d5ccc68 (run 42830951463). The Android release APK is built and signature-verified locally; four JVM tests pass. Android CI failed because its SDK setup requested Google’s removed tools package; the workflow is being corrected. Physical phone and Unicode acceptance remain pending."
     },
     {
       "id": "regression",
@@ -417,7 +417,16 @@
       "acceptance": "A release APK is built and apksigner verification succeeds; native signed JSON passes its independent contract tests.",
       "status": "done",
       "evidence": "Built DeviceBridge-Android-0.9.0-preview.apk locally and verified its APK v2 signature. The private signing identity remains outside the repository. Four JVM tests pass for Unicode/surrogate canonical JSON, safe numbers and the Node-generated Ed25519 vector. Phone installation and functional acceptance remain unchecked."
+    },
+    {
+      "id": "windows-installer-ci",
+      "group": "07 · Packaging, verification and release",
+      "title": "Verify the single-file Windows installer on a clean build runner",
+      "plan": "Bundle the verified Microsoft offline runtime and test installer installation, shortcuts, reinstall and uninstall in an isolated GitHub Windows runner.",
+      "acceptance": "The runtime-bundled installer compiles and all isolated installer checks pass without changing the user’s stable installation.",
+      "status": "done",
+      "evidence": "GitHub Windows run 42830951463 passed for commit d5ccc68, including 88 regression checks, native signature verification and installer install/reinstall/desktop shortcut/uninstall checks. The offline runtime vendor signature is Valid; runtime bytes are recorded in bundled-runtime.json. The already-installed-runtime path was tested; installing that dependency on a machine where it is absent still needs coverage. DeviceBridge code signing remains deferred."
     }
   ],
-  "stage": "Windows + Android preview: live Windows-to-browser screen connection and ASCII typing verified. Unicode typing needs an isolated retest. 88 Windows checks, 74 shared/service tests and 4 Android contract tests pass locally. Signed Android APK built; offline Windows runtime packaging and physical phone tests are in progress. The single-file Windows installer with bundled Microsoft runtime now compiles; clean-runner installation is next."
+  "stage": "Windows + Android preview: 88 Windows checks, 74 shared/service tests and 4 Android contract tests pass locally. The offline-runtime Windows installer passed isolated GitHub install/reinstall/shortcut/uninstall checks. Signed Android APK built; Android CI SDK setup is being fixed. Native screen and ASCII typing worked locally; Unicode and physical phone acceptance remain unfinished."
 }
