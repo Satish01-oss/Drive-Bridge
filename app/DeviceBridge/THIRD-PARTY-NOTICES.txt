@@ -10,7 +10,9 @@ Windows Desktop: https://github.com/dotnet/winforms
 
 The Microsoft runtime incorporates additional third-party components identified
 in the supplied third-party notice files. Notices are included without alteration.
-The app uses no cloud relay service. See the release 0.3 driver notice below.
+The Windows local mode uses no cloud relay. The 0.9 remote preview uses the
+DeviceBridge signaling service; screen/audio use direct encrypted WebRTC.
+See the release 0.3 driver notice below.
 
 Release 0.3 embeds the original VB-CABLE Driver Pack 46 from VB-Audio unchanged.
 VB-CABLE is donationware, all participations are welcome. www.vb-cable.com
@@ -23,3 +25,10 @@ Release 0.5 uses BouncyCastle.Cryptography 2.7.0 under its MIT license for SRP-6
 password-authenticated pairing. See licenses/BouncyCastle-MIT.txt.
 Source: https://github.com/bcgit/bc-csharp
 Package: https://www.nuget.org/packages/BouncyCastle.Cryptography/2.7.0
+
+Release 0.9 uses Microsoft.Web.WebView2 1.0.4314.35. Its license and notice
+are included in licenses/WebView2-LICENSE.txt and WebView2-NOTICE.txt.
+The installer bundles Microsoft's unchanged, Authenticode-verified Evergreen
+Standalone WebView2 Runtime, installed only if absent. Microsoft maintains
+that shared runtime's automatic updates. Documentation:
+https://learn.microsoft.com/microsoft-edge/webview2/concepts/distribution

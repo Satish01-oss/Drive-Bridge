@@ -1,6 +1,6 @@
 # Development pairing and signaling service
 
-This service is implemented and tested locally, not deployed to the internet. It does not capture or control a desktop and does not relay screen/audio media. Production persistence and real client integration remain pending.
+The free preview is deployed at https://devicebridge-signaling-preview.onrender.com. The Windows native host and shared Android/browser controller now use its signed pairing and signaling. Screen/audio travel directly over encrypted WebRTC; the service does not relay media. Physical Android and separate-network acceptance tests remain pending.
 
 ```sh
 cd remote
@@ -16,7 +16,7 @@ Defaults to `127.0.0.1:48940`. No ports or firewall rules are opened. `GET /heal
 1. A client generates an Ed25519 identity and sends its SPKI DER public key (base64url) to `POST /v1/challenges`.
 2. The service returns a 60-second, one-use challenge. The client signs its complete JSON value with the `auth` domain from `identity.mjs` and posts `{challengeId,signature}` to `/v1/auth`. It receives a 30-minute bearer token. No private key is sent to the service.
 3. The authenticated computer calls `/v1/pairings` with permissions (including `view`) and explicit reconnect consent. The six-character key expires in two minutes.
-4. The authenticated phone posts the code to `/v1/requests`. This creates a **pending** request only. The computer sees it via WebSocket or `GET /v1/requests`.
+4. The authenticated phone posts the code to `/v1/requests`. This creates a **pending** request only, valid for five minutes even if the two-minute invitation expires meanwhile. Generating a replacement key invalidates older pending requests. The computer sees the request via WebSocket or `GET /v1/requests`.
 5. The computer explicitly approves by signing the exact grant and posting `{grant,signature}` to `/v1/requests/<id>/approve`, or rejects it via `/reject`. Grant fields are documented by `grantFor` in the test fixtures. The server verifies the host signature, peer identities, expiry (maximum seven days) and permission subset. First approval consumes the key and rejects competing pending requests.
 6. Only the two approved peers can list that grant via `GET /v1/grants`. Only its computer can revoke it via `POST /v1/grants/<id>/revoke`.
 
@@ -36,4 +36,4 @@ To bind beyond loopback, an HTTPS public origin is required. Behind a **protecte
 
 This implementation limits request/message sizes, idle authentication/ticket lifetimes, stored records, pairing attempts, incoming request rates, socket buffers and socket counts. It is single-instance and does not provide distributed abuse protection. IPv4/IPv6 addresses come from the socket, not untrusted client IP headers; an ingress-level limit is needed for a hosted proxy.
 
-**State is in memory.** A server restart forgets grants and revocations as well as sessions. Do not treat this as durable trusted-device storage or enable unattended production access yet. Durable host-authorized restoration/revocation and OS-protected client storage must be completed before a real release.
+**Broker state is in memory.** Short codes and pending requests must be recreated after a restart. The Windows host stores grants in CurrentUser DPAPI-protected storage; Android uses its Keystore. On startup, only the authenticated host can restore its locally saved, unexpired, signature-verified grants with explicit reconnect consent via `/v1/grants/restore`. A controller cannot restore them. Local revocation is saved before contacting the service, so a failed network request cannot revive that grant when the host restarts. Revocation tombstones also block restoration during the current broker lifetime. The host's protected local store is the durable authority; this is a single-instance preview, not a durable multi-region service.

@@ -29,7 +29,7 @@
       "plan": "Create matching Windows and Android screens for modes, device pairing, permissions and remote controls; retain protocol compatibility for future Apple clients.",
       "acceptance": "The same core flow works on small phone screens and Windows/Mac desktops.",
       "status": "in_progress",
-      "evidence": "Built the shared responsive Windows/Android connection, pairing, approval and remote-control screens, with phone typing and touch/trackpad controls. The bundle builds successfully. Browser/native UI and physical device verification are still pending."
+      "evidence": "Implemented shared Windows/Android pairing, host approval and phone controls. The Windows app auto-connects to the service. A local controller preview connected after host approval; phone-size layout and physical Android usability still need acceptance. Moved approval above the key/options, added expiry messages and a Windows tray notification that restores the approval window."
     },
     {
       "id": "matrix",
@@ -47,7 +47,7 @@
       "plan": "Run a small authenticated HTTPS/WebSocket service for pairing, device availability and connection setup. Keep screen/audio content out of service logs.",
       "acceptance": "Two devices on different networks discover each other without opening router ports.",
       "status": "in_progress",
-      "evidence": "Implemented a loopback Node HTTP/WebSocket broker with Ed25519 identity authentication, one-use socket tickets, peer-scoped presence and signed signaling. Real-socket tests pass. Public hosting, durable restoration and separate-network device tests remain."
+      "evidence": "Free Render HTTPS/WebSocket signaling is live. The latest local suite passes 74 tests, including actual client reconnection after a broker restart and durable local revocation when a server call fails. Physical separate-network acceptance remains pending."
     },
     {
       "id": "pair",
@@ -101,7 +101,7 @@
       "plan": "Add native screen capture, hardware encoding where supported, display selection and cursor metadata alongside the existing sharing engine.",
       "acceptance": "A phone sees the selected display smoothly with correct scaling and orientation.",
       "status": "in_progress",
-      "evidence": "Implemented primary-display capture, bounded JPEG delivery into the embedded WebRTC canvas, native grant checks and capture cancellation. The Windows app builds cleanly. Real streaming and performance tests remain."
+      "evidence": "The native Windows host streamed a live screen to the authorized local browser controller through the public signaling service. Video reached readyState 4 at 1280×800 (and adapted to 640×400 during a later test). This verifies the native/browser component; Android, performance and separate-network tests remain."
     },
     {
       "id": "win-input",
@@ -110,7 +110,7 @@
       "plan": "Map touch and trackpad gestures to mouse actions; support scrolling, dragging, right-click, Unicode text and Windows shortcuts.",
       "acceptance": "Typing, selection, drag and shortcuts work without stuck keys or duplicate input.",
       "status": "in_progress",
-      "evidence": "Implemented native pointer mapping, mouse buttons, scroll, Unicode typing and approved Windows shortcut mappings. Native no-injection tests pass; actual remote input acceptance tests remain."
+      "evidence": "Native mouse/key mapping and atomic Unicode text batches are implemented. A live ASCII test correctly typed abcdefghijklmNOPQRSTUVWXYZ into a disposable Notepad tab. An earlier multilingual test produced replacement characters; Unicode remains unfinished and needs an isolated retest. Tests were stopped when another task used the desktop."
     },
     {
       "id": "win-audio",
@@ -209,7 +209,7 @@
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device controls both a Windows PC and a MacBook.",
       "status": "in_progress",
-      "evidence": "The Android companion APK compiled successfully using the installed SDK. It embeds the shared client, protects keys with Android Keystore, and asks for microphone access only when requested. Android hardware/runtime testing and release signing remain pending."
+      "evidence": "Android companion builds successfully with SDK 37, Java 17 and minimum Android 8. Added Keystore-encrypted storage, native Ed25519 signatures, audio permission flow, shared controls, checksum-pinned Gradle wrapper and dependency notices. Four JVM tests verify signed JSON and an independently generated Node signature fixture. No physical phone test yet."
     },
     {
       "id": "ios",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Windows remote preview source is now version 0.9.0 and builds with zero warnings/errors. All 86 Windows regression checks and native-to-service signature verification pass locally. Android build and final installer/runtime packaging are still pending; the public stable app remains 0.8.0."
+      "evidence": "Windows preview 0.9.0 builds and passes 88 non-hardware checks; earlier integrated Windows build d4427dd passed clean-runner installer install/reinstall/shortcut/uninstall CI. Android signed preview APK built and its signature verified locally. Four Android JVM contract tests pass. Latest offline-runtime Windows installer packaging and real-phone installation remain pending. The single-file Windows installer now builds at 280,527,045 bytes with the unchanged Microsoft offline WebView2 runtime; its vendor signature is Valid. Latest runtime-bundled installer clean-machine CI is pending."
     },
     {
       "id": "regression",
@@ -343,8 +343,8 @@
       "title": "Protect the existing Windows local mode",
       "plan": "Run current regression checks and physical keyboard, mouse, sound, microphone and background-sharing tests after integration.",
       "acceptance": "The new remote mode does not regress existing Windows-to-Windows functionality.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "All 88 Windows non-hardware checks pass locally. The prior integrated preview d4427dd also passed Windows installer install/reinstall/desktop shortcut/uninstall CI. Physical two-PC revalidation is still required."
     },
     {
       "id": "cross-tests",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "56 local tests passed, and the same service suite passed on Windows, macOS and Linux CI. Covers real loopback HTTP/WebSocket authentication, approvals, expired keys, peer-scoped presence, revocation and replay rejection. Public deployment and durable storage remain in the parent service task."
+      "evidence": "The latest local service/client/protocol/recovery/audio-buffer suite passes 74 tests. Previous suite d4427dd passed Windows, macOS and Linux CI. Includes real HTTP/WebSocket pairing, signature/replay rejection, host-authorized restoration after an actual broker restart and failed-network revocation. Full physical internet acceptance remains in the parent task."
     },
     {
       "id": "native-protected-identity",
@@ -389,7 +389,7 @@
       "plan": "Protect identity keys and grants with Windows DPAPI and make native signed JSON match the shared service contract.",
       "acceptance": "Identity persists across reload, corrupt data fails closed, and the service verifies a native signature.",
       "status": "done",
-      "evidence": "Implemented CurrentUser DPAPI storage and native Ed25519 signatures. All 86 Windows checks pass locally, including eight new native identity/input mapping checks. A Node verification script successfully verified the Windows-generated Unicode signature fixture."
+      "evidence": "CurrentUser DPAPI identity/grant storage and native Ed25519 signing are implemented. All 88 Windows checks passed, including identity persistence, corruption rejection and Unicode signature verification by Node. This completion covers identity/signing only."
     },
     {
       "id": "free-preview-host",
@@ -399,7 +399,25 @@
       "acceptance": "Render shows Free and Live for the expected repository commit; public HTTPS health returns successfully.",
       "status": "done",
       "evidence": "Verified the signed-in Render dashboard shows devicebridge-signaling-preview as Free and Live, deployed from commit 92337be. Public https://devicebridge-signaling-preview.onrender.com/health returned HTTP 200. The service is a preview, subject to free-tier idle/usage limits."
+    },
+    {
+      "id": "native-screen-preview",
+      "group": "03 · Windows remote host",
+      "title": "Verify native Windows screen streaming in a local controller preview",
+      "plan": "Connect the native Windows host to an explicitly approved local browser controller through the public signaling service and inspect live video readiness.",
+      "acceptance": "An approved native-to-browser session shows live video; stop the test afterward.",
+      "status": "done",
+      "evidence": "Actual authorized same-PC test connected through the live Render service. The browser video reported readyState 4 with nonzero resolution (1280×800, later 640×400). The controller was disconnected and its temporary tab closed. This does not certify Android or separate internet networks."
+    },
+    {
+      "id": "android-preview-build",
+      "group": "07 · Packaging, verification and release",
+      "title": "Build and verify a signed Android preview APK",
+      "plan": "Build a single APK using a private, stable release identity kept outside Git; verify its Android package signature and native signing contract.",
+      "acceptance": "A release APK is built and apksigner verification succeeds; native signed JSON passes its independent contract tests.",
+      "status": "done",
+      "evidence": "Built DeviceBridge-Android-0.9.0-preview.apk locally and verified its APK v2 signature. The private signing identity remains outside the repository. Four JVM tests pass for Unicode/surrogate canonical JSON, safe numbers and the Node-generated Ed25519 vector. Phone installation and functional acceptance remain unchecked."
     }
   ],
-  "stage": "Windows and Android preview implementation: Android APK builds; Windows builds with 86 regression checks; 68 service/client tests pass locally. Free Render signaling is live. Screen, input and audio still need runtime and physical-device acceptance tests."
+  "stage": "Windows + Android preview: live Windows-to-browser screen connection and ASCII typing verified. Unicode typing needs an isolated retest. 88 Windows checks, 74 shared/service tests and 4 Android contract tests pass locally. Signed Android APK built; offline Windows runtime packaging and physical phone tests are in progress. The single-file Windows installer with bundled Microsoft runtime now compiles; clean-runner installation is next."
 }

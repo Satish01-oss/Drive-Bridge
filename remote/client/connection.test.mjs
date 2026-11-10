@@ -37,3 +37,22 @@ test('non-local HTTP service URLs are rejected before any credentials are sent',
 test('browser fetch is invoked with the correct global receiver',async t=>{
  const f=await fixture(t);let calls=0;const client=new ConnectionClient({baseUrl:f.url,store:new MemoryStore(),WebSocketImpl:WebSocket,fetchImpl:function(...args){assert.equal(this,globalThis);calls++;return fetch(...args);}});t.after(()=>client.stop());await client.start();assert.ok(calls>=3);
 });
+
+test('host restores consent after an actual broker restart and the controller resumes signed signaling',async t=>{
+ let service=createService();const {port}=await service.listen(),baseUrl=`http://127.0.0.1:${port}`;
+ const hostStore=new MemoryStore(),phoneStore=new MemoryStore();
+ const host=new ConnectionClient({baseUrl,store:hostStore,WebSocketImpl:WebSocket}),phone=new ConnectionClient({baseUrl,store:phoneStore,WebSocketImpl:WebSocket});
+ const f={host,phone,hostEvent:events(host),phoneEvent:events(phone)};
+ t.after(async()=>{host.stop();phone.stop();await service.close();});
+ await Promise.all([host.start(),phone.start()]);const record=await paired(f);
+ host.stop();phone.stop();await service.close();service=createService();await service.listen(port);
+ await phone.start();assert.equal(service.broker.grants({deviceId:phone.deviceId}).length,0,'a controller alone cannot restore access');
+ await host.start();assert.equal(service.broker.grants({deviceId:host.deviceId}).length,1);
+ await phone.sendSignal(record.grant.id,message(id(),1,0));assert.equal((await f.hostEvent('signal')).signed.grantId,record.grant.id);
+});
+
+test('failed server-side revocation cannot restore a grant deleted from the host store',async t=>{
+ const f=await fixture(t),record=await paired(f);f.host.stop();await assert.rejects(f.host.revoke(record.grant.id));
+ assert.equal(f.host.grants.length,0);await f.host.start();assert.equal(f.host.grants.length,0);
+ await assert.rejects(f.host.sendSignal(record.grant.id,message(id(),1,0)),/trusted/);
+});

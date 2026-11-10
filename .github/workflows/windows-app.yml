@@ -22,7 +22,7 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
-    timeout-minutes: 15
+    timeout-minutes: 25
     defaults:
       run:
         shell: pwsh
@@ -61,5 +61,6 @@ jobs:
           path: |
             app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe
             app/DeviceBridge/installer-output/SHA256.txt
+            app/DeviceBridge/installer-output/bundled-runtime.json
             app/DeviceBridge/portable/self-test-result.txt
           if-no-files-found: warn

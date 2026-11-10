@@ -17,6 +17,7 @@ internal static class RemoteNativeCheck
    Check(RemoteProtectedStore.Canonical(value.RootElement).StartsWith("{\"a\":[1,true,null],\"z\":"),"Native signed JSON sorts object keys and retains Unicode strings");
    File.WriteAllText(Path.Combine(AppContext.BaseDirectory,"remote-contract-result.json"),JsonSerializer.Serialize(new{publicKey,purpose="grant",value=value.RootElement.Clone(),signature}));
    Check(RemoteInput.Key("KeyA")== (65,0)&&RemoteInput.Key("ControlRight")== (0xA3,1)&&RemoteInput.Key("ArrowLeft")== (37,1),"Remote keyboard mapping preserves letters and extended Windows keys without injecting input");
+   int batches=0;var text="Remote typing — hello 👋";RemoteInput.WriteText(text,events=>{batches++;Check(new string(events.Where(e=>!e.Up).Select(e=>e.Unit).ToArray())==text&&events.Length==text.Length*2,"Remote Unicode text preserves surrogate pairs and balanced key releases");return (uint)events.Length;});Check(batches==1,"Remote text is injected as one atomic batch instead of interleaving per-character calls");
    bool invalid=false;try{RemoteInput.Key("RunShell");}catch(IOException){invalid=true;}Check(invalid,"Unknown remote key codes fail closed");
    using var grants=JsonDocument.Parse("[]");store.Set("grants",grants.RootElement);Check(store.Get("grants")?.GetArrayLength()==0,"Native grant records round trip through protected storage");
    bool unapproved=false;try{store.OwnGrant("unapproved-phone");}catch(IOException){unapproved=true;}Check(unapproved,"An unapproved phone cannot obtain native screen-capture permission");

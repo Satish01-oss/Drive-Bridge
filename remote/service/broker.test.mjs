@@ -44,6 +44,9 @@ test('rejecting or consuming a request prevents later approval and key reuse',()
  const {broker,host,phone}=fixture();const rejected=pair(broker,host,phone);broker.reject(host.auth,rejected.request.requestId);assert.throws(()=>approve(broker,host,rejected.request),/unavailable/);
  const next=pair(broker,host,phone);approve(broker,host,next.request);assert.throws(()=>broker.requestPairing(phone.auth,next.invitation.code),/unavailable/);assert.throws(()=>approve(broker,host,next.request),/unavailable/);
 });
+test('an accepted key leaves five minutes for approval while expired keys cannot start new requests',()=>{
+ const {broker,host,phone,advance}=fixture(),{invitation,request}=pair(broker,host,phone);advance(120001);assert.throws(()=>broker.requestPairing(phone.auth,invitation.code),/unavailable/);assert.equal(approve(broker,host,request).grant.controllerId,phone.deviceId);
+});
 test('guessing attempts and global state have bounded limits',()=>{
  const {broker,phone}=fixture();for(let i=0;i<5;i++)assert.throws(()=>broker.requestPairing(phone.auth,'AAAAAA'),/unavailable/);assert.throws(()=>broker.requestPairing(phone.auth,'AAAAAA'),/rate-limited/);
  const small=new Broker({capacity:1});small.challenge(identity().publicKey);assert.throws(()=>small.challenge(identity().publicKey),/capacity/);

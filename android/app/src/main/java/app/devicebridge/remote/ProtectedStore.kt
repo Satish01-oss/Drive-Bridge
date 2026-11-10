@@ -51,16 +51,12 @@ class ProtectedStore(private val context: Context) {
     }
     fun set(name: String,value: Any?) {require(name=="grants"&&value is JSONArray&&value.length()<=1000);val bytes=value.toString().toByteArray(Charsets.UTF_8);require(bytes.size<=2*1024*1024);write(name,bytes)}
     companion object {
-        fun canonical(value: Any?): String=when(value){
-            null,JSONObject.NULL->"null"
-            is String->quote(value)
-            is Boolean->value.toString()
-            is Number->{val n=value.toLong();require(n.toDouble()==value.toDouble()&&n in -9007199254740991L..9007199254740991L);n.toString()}
-            is JSONArray->(0 until value.length()).joinToString(",","[","]"){canonical(value.get(it))}
-            is JSONObject->value.keys().asSequence().sorted().joinToString(",","{","}"){quote(it)+":"+canonical(value.get(it))}
-            else->throw IllegalArgumentException("Invalid signed value")
+        private fun jsonValue(value: Any?): Any?=when(value){
+            null,JSONObject.NULL->null
+            is JSONArray->(0 until value.length()).map{jsonValue(value.get(it))}
+            is JSONObject->value.keys().asSequence().associateWith{jsonValue(value.get(it))}
+            else->value
         }
-        private fun quote(text: String): String=buildString{append('"');for(i in text.indices){val c=text[i];when(c){'"'->append("\\\"");'\\'->append("\\\\");'\b'->append("\\b");'\u000c'->append("\\f");'\n'->append("\\n");'\r'->append("\\r");'\t'->append("\\t");else->{val paired=(Character.isHighSurrogate(c)&&i+1<text.length&&Character.isLowSurrogate(text[i+1]))||(Character.isLowSurrogate(c)&&i>0&&Character.isHighSurrogate(text[i-1]));if(c.code<32||(Character.isSurrogate(c)&&!paired))append("\\u"+c.code.toString(16).padStart(4,'0'))else append(c)}}};append('"')}
+        fun canonical(value: Any?): String=SignatureJson.canonical(jsonValue(value))
     }
 }
-

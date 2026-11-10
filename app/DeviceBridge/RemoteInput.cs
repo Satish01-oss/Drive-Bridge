@@ -31,7 +31,7 @@ internal sealed class RemoteInput : IDisposable
         else if (type == "text")
         {
             var text = value.GetProperty("text").GetString()!; if (text.Length == 0 || Encoding.UTF8.GetByteCount(text) > 4096 || text.Contains('\0')) throw new IOException("Invalid typed text.");
-            foreach (var c in text) { Unicode(c, false); Unicode(c, true); }
+            WriteText(text);
         }
         else if (type == "release-all") input.ReleaseAll(); else throw new IOException("Invalid input event.");
     }
@@ -48,7 +48,21 @@ internal sealed class RemoteInput : IDisposable
             _ => throw new IOException("Unsupported keyboard shortcut.")
         };
     }
-    static void Unicode(char value, bool up) { var command = new NativeInput { type = 1, union = new NativeUnion { keyboard = new Keyboard { scan = value, flags = 4u | (up ? 2u : 0) } } }; if (SendInput(1, new[] { command }, Marshal.SizeOf<NativeInput>()) != 1) throw new Win32Exception("Windows blocked typing on this screen."); }
+    internal readonly record struct TextEvent(char Unit, bool Up);
+    internal static void WriteText(string text, Func<TextEvent[], uint>? sink = null)
+    {
+        if (text.Length == 0 || Encoding.UTF8.GetByteCount(text) > 4096 || text.Contains('\0')) throw new IOException("Invalid typed text.");
+        var events = text.SelectMany(c => new[] { new TextEvent(c, false), new TextEvent(c, true) }).ToArray();
+        uint sent;
+        if (sink != null) sent = sink(events);
+        else
+        {
+            var commands = events.Select(e => new NativeInput { type = 1, union = new NativeUnion { keyboard = new Keyboard { scan = e.Unit, flags = 4u | (e.Up ? 2u : 0) } } }).ToArray();
+            // SendInput inserts a batch serially without interleaving other input.
+            sent = SendInput((uint)commands.Length, commands, Marshal.SizeOf<NativeInput>());
+        }
+        if (sent != events.Length) throw new Win32Exception("Windows could not finish remote typing on this screen.");
+    }
     [StructLayout(LayoutKind.Sequential)] struct Keyboard { public ushort vk, scan; public uint flags, time; public nuint extra; }
     [StructLayout(LayoutKind.Sequential)] struct Mouse { public int x, y; public uint data, flags, time; public nuint extra; }
     [StructLayout(LayoutKind.Explicit)] struct NativeUnion { [FieldOffset(0)] public Keyboard keyboard; [FieldOffset(0)] public Mouse mouse; }

@@ -32,6 +32,7 @@ export class Broker extends EventEmitter{
  createPairing(auth,{permissions:requested,reconnect}){
   deny(permissions(requested)&&typeof reconnect==='boolean','invalid-pairing');this.limit('pair-create:'+auth.deviceId,10);this.#room(this.#pairings);
   for(const [code,p]of this.#pairings)if(p.hostId===auth.deviceId)this.#pairings.delete(code);
+  for(const request of this.#requests.values())if(request.hostId===auth.deviceId&&request.status==='pending')request.status='rejected';
   let code;do{code=Array.from({length:6},()=>alphabet[randomInt(alphabet.length)]).join('');}while(this.#pairings.has(code));
   const row={hostId:auth.deviceId,hostKey:auth.publicKey,permissions:[...requested],reconnect,expiresAt:this.#now()+120000};this.#pairings.set(code,row);
   return {code,hostId:auth.deviceId,hostKey:auth.publicKey,expiresAt:row.expiresAt};
@@ -40,19 +41,19 @@ export class Broker extends EventEmitter{
   this.limit('pair-try:'+auth.deviceId,5);deny(typeof code==='string'&&/^[2-9A-HJ-NP-Z]{6}$/.test(code),'pairing-unavailable',404);this.#prune();
   const p=this.#pairings.get(code);deny(p&&p.hostId!==auth.deviceId,'pairing-unavailable',404);
   deny([...this.#requests.values()].filter(r=>r.status==='pending'&&r.hostId===p.hostId).length<5,'pairing-busy',429);this.#room(this.#requests);
-  const request={requestId:randomId(),hostId:p.hostId,hostKey:p.hostKey,controllerId:auth.deviceId,controllerKey:auth.publicKey,permissions:[...p.permissions],reconnect:p.reconnect,expiresAt:p.expiresAt,status:'pending',code};
+  const request={requestId:randomId(),hostId:p.hostId,hostKey:p.hostKey,controllerId:auth.deviceId,controllerKey:auth.publicKey,permissions:[...p.permissions],reconnect:p.reconnect,expiresAt:this.#now()+300000,status:'pending',code};
   this.#requests.set(request.requestId,request);this.emit('device',p.hostId,{type:'pairing-request',request:this.#publicRequest(request)});return this.#publicRequest(request);
  }
  #publicRequest({code,...request}){return structuredClone(request);}
  requests(auth){this.#prune();return [...this.#requests.values()].filter(r=>r.hostId===auth.deviceId||r.controllerId===auth.deviceId).map(r=>this.#publicRequest(r));}
  approve(auth,requestId,grant,signature){
   this.#prune();const r=this.#requests.get(requestId);deny(r&&r.status==='pending'&&r.hostId===auth.deviceId,'request-unavailable',404);
-  deny(this.#pairings.get(r.code)?.hostId===auth.deviceId,'request-unavailable',404);
   exact(grant,['version','id','requestId','hostId','controllerId','permissions','reconnect','revision','expiresAt']);
   deny(grant.version===1&&typeof grant.id==='string'&&/^[A-Za-z0-9_-]{16,96}$/.test(grant.id)&&!this.#grants.has(grant.id)&&grant.requestId===requestId&&grant.hostId===r.hostId&&grant.controllerId===r.controllerId&&grant.revision===1&&permissions(grant.permissions)&&grant.permissions.every(p=>r.permissions.includes(p))&&typeof grant.reconnect==='boolean'&&(!grant.reconnect||r.reconnect)&&Number.isSafeInteger(grant.expiresAt)&&grant.expiresAt>this.#now()&&grant.expiresAt<=this.#now()+7*86400000,'invalid-grant');
   deny(verifiedSignature(auth.publicKey,'grant',grant,signature),'invalid-signature',401);this.#room(this.#grants);
   const saved={grant:structuredClone(grant),signature,hostKey:r.hostKey,controllerKey:r.controllerKey,expiresAt:grant.expiresAt};this.#grants.set(grant.id,saved);
-  for(const pending of this.#requests.values())if(pending.code===r.code)pending.status=pending===r?'approved':'rejected';this.#pairings.delete(r.code);
+  for(const pending of this.#requests.values())if(pending.hostId===r.hostId&&pending.code===r.code)pending.status=pending===r?'approved':'rejected';
+  if(this.#pairings.get(r.code)?.hostId===r.hostId)this.#pairings.delete(r.code);
   for(const id of [r.hostId,r.controllerId])this.emit('device',id,{type:'grant-approved',record:structuredClone(saved)});return structuredClone(saved);
  }
  reject(auth,requestId){const r=this.#requests.get(requestId);deny(r&&r.hostId===auth.deviceId&&r.status==='pending','request-unavailable',404);r.status='rejected';this.emit('device',r.controllerId,{type:'pairing-rejected',requestId});return {rejected:true};}

@@ -51,7 +51,7 @@ export class ConnectionClient{
    });current();
    this.#heartbeat=setInterval(()=>{if(this.connected)this.#socket.send(JSON.stringify({type:'heartbeat'}));},20000);this.#heartbeat.unref?.();
    this.#emit({type:'status',status:'service-connected'});
-   const requests=await this.#http('/v1/requests');for(const request of requests.requests)this.#requests.set(request.requestId,request);
+   const requests=await this.#http('/v1/requests');for(const request of requests.requests){this.#requests.set(request.requestId,request);if(request.hostId===this.#deviceId&&request.status==='pending')this.#emit({type:'pairing-request',request});}
    // Server listings never silently grant new trust. Only locally approved records persist.
    const remote=await this.#http('/v1/grants');for(const record of remote.grants){const saved=this.#grants.get(record.grant.id);if(saved&&canonical(saved.grant)===canonical(record.grant))await this.#knownGrant(record);}
   })().catch(error=>{if(generation===this.#generation){clearInterval(this.#heartbeat);this.#socket?.close();this.#emit({type:'status',status:'service-offline'});}throw error;}).finally(()=>{if(generation===this.#generation)this.#starting=null;});

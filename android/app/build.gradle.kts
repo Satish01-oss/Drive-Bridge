@@ -13,4 +13,4 @@ android {
     }
     buildTypes { getByName("release") { isMinifyEnabled = false; if(signingConfigs.findByName("releaseIdentity") != null) signingConfig = signingConfigs.getByName("releaseIdentity") } }
 }
-dependencies { implementation("androidx.webkit:webkit:1.16.0"); implementation("org.bouncycastle:bcprov-jdk18on:1.86") }
+dependencies { implementation("androidx.webkit:webkit:1.16.0"); implementation("org.bouncycastle:bcprov-jdk18on:1.86"); testImplementation("junit:junit:4.13.2") }

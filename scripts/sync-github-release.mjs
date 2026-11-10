@@ -15,7 +15,8 @@ export function selectAsset(release) {
   const assets = release.assets?.filter(a => a.name === filename) || [];
   if (assets.length !== 1 || assets[0].state !== 'uploaded') throw new Error(`Attach exactly one uploaded ${filename} before publishing the release`);
   const asset = assets[0];
-  if (!Number.isSafeInteger(asset.size) || asset.size < 512 || asset.size > 200 * 1024 * 1024) throw new Error('EXE size is invalid (maximum 200 MiB)');
+  const maximum = filename === installer ? 512 : 200;
+  if (!Number.isSafeInteger(asset.size) || asset.size < 512 || asset.size > maximum * 1024 * 1024) throw new Error(`EXE size is invalid (maximum ${maximum} MiB)`);
   const url = new URL(asset.browser_download_url);
   if (url.origin !== 'https://github.com' || url.pathname !== `/${repository}/releases/download/${release.tag_name}/${filename}` || url.search || url.hash) throw new Error('EXE must be an asset of this repository and release');
   if (asset.digest && !/^sha256:[a-f0-9]{64}$/i.test(asset.digest)) throw new Error('Invalid GitHub asset digest');

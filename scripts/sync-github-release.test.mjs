@@ -87,6 +87,14 @@ test('installer is preferred to a portable app and its standard launcher updates
   assert.deepEqual(Buffer.concat(await Promise.all(manifest.parts.map(p=>readFile(join(root,p))))),installer);
 });
 
+test('offline-runtime installers have a larger bounded limit while portable downloads remain limited',()=>{
+  const {release}=fixture(); const asset=release.assets[0]; asset.size=300*1024*1024;
+  assert.throws(()=>selectAsset(release),/maximum 200 MiB/);
+  asset.name='DeviceBridge-Setup-0.8.0.exe'; asset.browser_download_url=`https://github.com/${repository}/releases/download/v0.8.0/${asset.name}`;
+  assert.equal(selectAsset(release).kind,'installer');
+  asset.size=513*1024*1024; assert.throws(()=>selectAsset(release),/maximum 512 MiB/);
+});
+
 test('missing EXE, drafts, prereleases, wrong version and foreign assets are rejected',()=>{
   const {release}=fixture();
   for (const change of [{assets:[]},{draft:true},{prerelease:true},{tag_name:'latest'},

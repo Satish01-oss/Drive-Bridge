@@ -4,9 +4,12 @@ import {RemotePeer} from './client/peer.mjs';
 import {acquireNativeHost} from './client/native-media.mjs';
 import {toBase64Url} from './shared/signatures.mjs';
 const el=id=>document.getElementById(id),windowsNative=globalThis.chrome?.webview,androidNative=globalThis.DeviceBridgeAndroid,native=windowsNative||(androidNative?{postMessage:value=>androidNative.postMessage(JSON.stringify(value)),addEventListener:(_,listener)=>window.addEventListener('devicebridge-native',event=>listener({data:event.detail}))}:null),pending=new Map();
-let client,role,peer,wanted=false,pageActive=true,retryTimer,retries=0,autoGrant=null,reconnectTimer,mic=false,touchMode=true,resourcesReady=new Map();
+let client,role,peer,wanted=false,pageActive=true,retryTimer,retries=0,autoGrant=null,reconnectTimer,pairTimer,mic=false,touchMode=true,resourcesReady=new Map();
+const promptTimers=new Map();
 const status=text=>{el('status').textContent=text;};
-const run=action=>async event=>{event?.preventDefault();try{await action();}catch(error){status(error.message);}};
+const friendlyError=error=>({'pairing-unavailable':'That key expired or could not be found. Generate a new key on the PC and try again.','request-unavailable':'This request expired or the connection service restarted. Generate a fresh key and reconnect.','pairing-busy':'This computer has several pending requests. Try a fresh key.','rate-limited':'Too many attempts. Wait a minute, then try a fresh key.','unauthorized':'The service connection expired. Reconnecting…'}[error.message]||error.message);
+const run=action=>async event=>{event?.preventDefault();const button=event?.currentTarget?.tagName==='BUTTON'?event.currentTarget:null;if(button)button.disabled=true;try{await action();}catch(error){if(error.name!=='AbortError')status(friendlyError(error));}finally{if(button)button.disabled=false;}};
+function clearPrompts(){for(const timer of promptTimers.values())clearTimeout(timer);promptTimers.clear();el('approvals').replaceChildren();}
 function rpc(type,payload={}){if(!native)return Promise.reject(Error('Open this in the installed Windows app.'));const rpcId=crypto.randomUUID();return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pending.delete(rpcId);reject(Error('The Windows app did not respond.'));},15000);pending.set(rpcId,{resolve,reject,timeout});native.postMessage({rpcId,type,...payload});});}
 native?.addEventListener('message',event=>{const m=event.data;if(m.rpcId&&pending.has(m.rpcId)){const p=pending.get(m.rpcId);pending.delete(m.rpcId);clearTimeout(p.timeout);m.error?p.reject(Error(m.error)):p.resolve(m.result);}else if(['frame','sound','mic-ack'].includes(m.type)){const resource=resourcesReady.get(m.captureId);if(resource)resource.handle(m).catch(error=>status(error.message));else if(m.type!=='mic-ack')native.postMessage({type:m.type==='frame'?'frame.ack':'sound.ack',captureId:m.captureId});}else if(m.type==='native-error')status(m.message);else if(m.type==='capture-error'){peer?.close('transport-failed');status(m.message);}else if(m.type==='native-stop'){autoGrant=null;peer?.close('user');status('Sharing stopped on this computer.');}});
 const nativeStore=native?{get:key=>rpc('store.get',{key}),set:(key,value)=>rpc('store.set',{key,value})}:null;
@@ -35,10 +38,21 @@ function showDevices(){const area=el('device-list');area.replaceChildren();const
 async function approve(request){
  let source;
  if(!native){source=await browserSource(request.permissions);resourcesReady.set('pending-'+request.requestId,source);}
- try{const record=await client.approveRequest(request);if(source)resourcesReady.set(record.grant.id,source);if(native)await rpc('grant.save',{record});status('Phone approved. Waiting for its connection…');el('approvals').replaceChildren();showDevices();}
+ try{const record=await client.approveRequest(request);if(source)resourcesReady.set(record.grant.id,source);if(native)await rpc('grant.save',{record});status('Phone approved. Waiting for its connection…');clearPrompts();showDevices();}
  catch(error){source?.dispose();throw error;}
 }
-function requestPrompt(request){if(role!=='host')return;const row=document.createElement('div');row.className='request';const title=document.createElement('strong'),details=document.createElement('p'),allow=document.createElement('button'),deny=document.createElement('button');title.textContent='A phone wants to connect';details.textContent=request.permissions.join(' · ')+(request.reconnect?' · May reconnect after interruption':'');allow.textContent='Allow this phone';deny.textContent='Reject';deny.className='secondary';allow.onclick=run(()=>approve(request));deny.onclick=run(async()=>{await client.rejectRequest(request.requestId);row.remove();status('Connection request rejected.');});row.append(title,details,allow,deny);el('approvals').append(row);}
+function requestPrompt(request){
+ if(role!=='host'||request.expiresAt<=Date.now()||promptTimers.has(request.requestId))return;
+ const row=document.createElement('div');row.className='request';row.setAttribute('role','region');row.setAttribute('aria-label','Phone connection approval');
+ const title=document.createElement('strong'),details=document.createElement('p'),allow=document.createElement('button'),deny=document.createElement('button');
+ const remove=()=>{clearTimeout(promptTimers.get(request.requestId));promptTimers.delete(request.requestId);row.remove();};
+ title.textContent='A phone wants to connect';details.textContent=request.permissions.join(' · ')+(request.reconnect?' · May reconnect after interruption':'');
+ allow.textContent='Allow this phone';deny.textContent='Reject';deny.className='secondary';
+ allow.onclick=run(async()=>{if(request.expiresAt<=Date.now()){remove();throw Error('request-unavailable');}try{await approve(request);}catch(error){if(error.message==='request-unavailable')remove();throw error;}});
+ deny.onclick=run(async()=>{try{await client.rejectRequest(request.requestId);status('Connection request rejected.');}finally{remove();}});
+ row.append(title,details,allow,deny);el('approvals').append(row);promptTimers.set(request.requestId,setTimeout(()=>{remove();status('Phone request expired. Generate a fresh key to try again.');},Math.max(1,request.expiresAt-Date.now())));
+ row.scrollIntoView({block:'nearest'});if(windowsNative)rpc('pairing.notify').catch(()=>{});
+}
 async function browserSource(permissions){
  const stream=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:15},audio:permissions.includes('speaker')});const videoTrack=stream.getVideoTracks()[0],settings=videoTrack.getSettings();
  return {videoTrack,audioTrack:stream.getAudioTracks()[0],display:{id:toBase64Url(crypto.getRandomValues(new Uint8Array(24))),width:settings.width||1280,height:settings.height||720},applyInput:()=>status('Screen preview: desktop input needs the installed Windows app.'),dispose:()=>stream.getTracks().forEach(t=>t.stop())};
@@ -49,13 +63,13 @@ async function acquireHost(grant){
 }
 function onClient(event){
  if(event.type==='status'){
-  if(event.status==='service-connected'){clearTimeout(retryTimer);retries=0;el('mode').hidden=!!native;if(native){role=windowsNative?'host':'controller';el('host').hidden=role!=='host';el('phone').hidden=role!=='controller';el('setup').hidden=true;showDevices();}el('connect-service').disabled=false;el('stop-all').hidden=false;status('Connected to the connection service. Choose a mode.');if(autoGrant)scheduleRemote();}
-  if(event.status==='service-offline'&&wanted){status('Connection service unavailable — retrying…');clearTimeout(retryTimer);retryTimer=setTimeout(()=>client.start().catch(()=>{}),Math.min(30000,1000*2**Math.min(retries++,5)));}
+  if(event.status==='service-connected'){clearTimeout(retryTimer);retries=0;el('mode').hidden=!!native;if(native){role=windowsNative?'host':'controller';el('host').hidden=role!=='host';el('phone').hidden=role!=='controller';el('setup').hidden=true;showDevices();}el('connect-service').disabled=false;el('stop-all').hidden=false;status(peer?.ready?'Connected — your computer is ready.':native?(role==='host'?'Ready — generate a key for your phone.':'Ready — enter the key from your computer.'):'Connected to the connection service. Choose a mode.');if(autoGrant)scheduleRemote();}
+  if(event.status==='service-offline'&&wanted){clearPrompts();status(peer?.ready?'Connected — restoring the connection service…':'Connection service unavailable — retrying…');clearTimeout(retryTimer);retryTimer=setTimeout(()=>client.start().catch(()=>{}),Math.min(30000,1000*2**Math.min(retries++,5)));}
  }
  if(event.type==='pairing-request')requestPrompt(event.request);
- if(event.type==='grant-approved'){showDevices();if(role==='controller'){el('pair-status').textContent='Approved by your computer.';openRemote(event.record).catch(error=>status(error.message));}}
+ if(event.type==='grant-approved'){clearTimeout(pairTimer);showDevices();if(role==='controller'){el('pair-status').textContent='Approved by your computer.';openRemote(event.record).catch(error=>status(error.message));}}
  if(event.type==='grant-revoked'){autoGrant=null;peer?.close('revoked');showDevices();status('Access removed by the computer.');}
- if(event.type==='pairing-rejected')el('pair-status').textContent='The computer declined this request.';
+ if(event.type==='pairing-rejected'){clearTimeout(pairTimer);el('pair-status').textContent='The computer declined or replaced this request. Try its latest key.';}
  if(event.type==='presence'&&autoGrant&&event.deviceId===autoGrant.grant.hostId){if(!event.online){status('PC offline — waiting to reconnect.');peer?.close('transport-failed');}else if(!peer?.ready)scheduleRemote();}
  if(event.type==='signal'&&role==='host'&&event.signed.message.payload.type==='offer'){
   const record=client.grants.find(r=>r.grant.id===event.signed.grantId);if(!record)return;const old=peer;peer=null;old?.close('transport-failed');
@@ -68,10 +82,10 @@ function onClient(event){
 }
 el('connect-service').onclick=run(async()=>{const baseUrl=el('service').value.trim();autoGrant=null;peer?.close('user');peer=null;client?.stop();client=new ConnectionClient({baseUrl,store,identityProvider});client.subscribe(onClient);wanted=true;el('connect-service').disabled=true;try{await client.start();localStorage.setItem('devicebridge-service',baseUrl);}finally{el('connect-service').disabled=false;}});
 el('choose-host').onclick=()=>{role='host';el('host').hidden=false;el('phone').hidden=true;showDevices();};el('choose-phone').onclick=()=>{role='controller';el('host').hidden=true;el('phone').hidden=false;showDevices();};
-el('generate-key').onclick=run(async()=>{const permissions=['view'];if(el('allow-input').checked)permissions.push('input');if(el('allow-speaker').checked)permissions.push('speaker');if(el('allow-mic').checked)permissions.push('microphone');const p=await client.createPairing({permissions,reconnect:el('allow-reconnect').checked});el('code').textContent=p.code;el('key-expiry').textContent='This key expires in two minutes. Approve the request below.';});
-el('pair').onclick=run(async()=>{await client.requestPairing(el('pair-code').value);el('pair-status').textContent='Waiting for approval on the computer…';});
+el('generate-key').onclick=run(async()=>{const permissions=['view'];if(el('allow-input').checked)permissions.push('input');if(el('allow-speaker').checked)permissions.push('speaker');if(el('allow-mic').checked)permissions.push('microphone');const p=await client.createPairing({permissions,reconnect:el('allow-reconnect').checked});clearPrompts();el('code').textContent=p.code;el('key-expiry').textContent='The key is valid for two minutes. Once requested, you have five minutes to approve.';});
+el('pair').onclick=run(async()=>{clearTimeout(pairTimer);const request=await client.requestPairing(el('pair-code').value);el('pair-status').textContent='Waiting for approval on the computer…';pairTimer=setTimeout(()=>{el('pair-status').textContent='Approval timed out. Generate a new key on the PC and try again.';},Math.max(1,request.expiresAt-Date.now()));});
 el('disconnect').onclick=()=>{autoGrant=null;clearTimeout(reconnectTimer);peer?.close('user');peer=null;el('remote').hidden=true;};
-el('stop-all').onclick=()=>{wanted=false;autoGrant=null;clearTimeout(retryTimer);clearTimeout(reconnectTimer);peer?.close('user');peer=null;client?.stop();el('remote').hidden=true;el('mode').hidden=true;status('Disconnected — all sharing stopped.');};
+el('stop-all').onclick=()=>{wanted=false;autoGrant=null;clearTimeout(pairTimer);clearPrompts();clearTimeout(retryTimer);clearTimeout(reconnectTimer);peer?.close('user');peer=null;client?.stop();el('remote').hidden=true;el('mode').hidden=true;status('Disconnected — all sharing stopped.');};
 el('typing').onsubmit=run(async()=>{const text=el('text').value;if(text&&peer?.sendInput({type:'text',text}))el('text').value='';});
 function key(code){peer?.sendInput({type:'key',code,down:true});peer?.sendInput({type:'key',code,down:false});}
 document.querySelectorAll('[data-key]').forEach(button=>button.onclick=()=>key(button.dataset.key));
@@ -94,4 +108,3 @@ try{el('service').value=localStorage.getItem('devicebridge-service')||(native?'h
 if(native)el('connect-service').click();
 
 el('setup-mic').hidden=!windowsNative;el('setup-mic').onclick=run(()=>rpc('driver.setup'));
-

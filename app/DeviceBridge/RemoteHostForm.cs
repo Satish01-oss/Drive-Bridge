@@ -97,6 +97,7 @@ internal sealed class RemoteHostForm : Form
             object? result = null;
             switch (type)
             {
+                case "pairing.notify": RestoreWindow(); tray.ShowBalloonTip(8000, "A phone wants to connect", "Review the request in DeviceBridge. Sharing starts only after you allow it.", ToolTipIcon.Info); break;
                 case "identity.get": result = new { publicKey = store.PublicKey }; break;
                 case "identity.sign": result = store.Sign(request.GetProperty("purpose").GetString()!, request.GetProperty("value")); break;
                 case "identity.verify": result = RemoteProtectedStore.Verify(request.GetProperty("publicKey").GetString()!, request.GetProperty("purpose").GetString()!, request.GetProperty("value"), request.GetProperty("signature").GetString()!); break;
