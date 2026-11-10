@@ -10,7 +10,7 @@ import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters
 import org.bouncycastle.crypto.signers.Ed25519Signer
 import org.bouncycastle.asn1.x509.SubjectPublicKeyInfo
 import org.bouncycastle.asn1.x509.AlgorithmIdentifier
-import org.bouncycastle.asn1.edec.EdECObjectIdentifiers
+import org.bouncycastle.asn1.ASN1ObjectIdentifier
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -40,14 +40,14 @@ class ProtectedStore(private val context: Context) {
     }
     private fun seed(): ByteArray {val saved=read("identity");if(saved!=null){require(saved.size==32);return saved};return ByteArray(32).also{SecureRandom().nextBytes(it);write("identity",it)}}
     private fun encoded(bytes: ByteArray)=Base64.encodeToString(bytes,Base64.URL_SAFE or Base64.NO_PADDING or Base64.NO_WRAP)
-    fun publicKey(): String {val seed=seed();try{val key=Ed25519PrivateKeyParameters(seed,0).generatePublicKey();return encoded(SubjectPublicKeyInfo(AlgorithmIdentifier(EdECObjectIdentifiers.id_Ed25519),key.encoded).encoded)}finally{seed.fill(0)}}
+    fun publicKey(): String {val seed=seed();try{val key=Ed25519PrivateKeyParameters(seed,0).generatePublicKey();return encoded(SubjectPublicKeyInfo(AlgorithmIdentifier(ASN1ObjectIdentifier("1.3.101.112")),key.encoded).encoded)}finally{seed.fill(0)}}
     fun sign(purpose: String,value: Any?): String {
         require(purpose in listOf("auth","grant","signal")){"Unsupported signing purpose"};val bytes=("devicebridge.$purpose.v1\n"+canonical(value)).toByteArray(Charsets.UTF_8);require(bytes.size<=65536)
         val seed=seed();try{val signer=Ed25519Signer();signer.init(true,Ed25519PrivateKeyParameters(seed,0));signer.update(bytes,0,bytes.size);return encoded(signer.generateSignature())}finally{seed.fill(0)}
     }
     fun get(name: String): Any {require(name=="grants");return read(name)?.let{JSONArray(it.toString(Charsets.UTF_8))}?:JSONObject.NULL}
     fun verify(publicKey:String,purpose:String,value:Any?,signature:String):Boolean {
-        return try{require(purpose in listOf("auth","grant","signal"));require(publicKey.length==59&&signature.length==86);val key=SubjectPublicKeyInfo.getInstance(Base64.decode(publicKey,Base64.URL_SAFE or Base64.NO_WRAP));require(key.algorithm.algorithm==EdECObjectIdentifiers.id_Ed25519);val bytes=("devicebridge.$purpose.v1\n"+canonical(value)).toByteArray(Charsets.UTF_8);require(bytes.size<=65536);val verifier=Ed25519Signer();verifier.init(false,Ed25519PublicKeyParameters(key.publicKeyData.bytes,0));verifier.update(bytes,0,bytes.size);verifier.verifySignature(Base64.decode(signature,Base64.URL_SAFE or Base64.NO_WRAP))}catch(_:Exception){false}
+        return try{require(purpose in listOf("auth","grant","signal"));require(publicKey.length==59&&signature.length==86);val key=SubjectPublicKeyInfo.getInstance(Base64.decode(publicKey,Base64.URL_SAFE or Base64.NO_WRAP));require(key.algorithm.algorithm.id=="1.3.101.112");val bytes=("devicebridge.$purpose.v1\n"+canonical(value)).toByteArray(Charsets.UTF_8);require(bytes.size<=65536);val verifier=Ed25519Signer();verifier.init(false,Ed25519PublicKeyParameters(key.publicKeyData.bytes,0));verifier.update(bytes,0,bytes.size);verifier.verifySignature(Base64.decode(signature,Base64.URL_SAFE or Base64.NO_WRAP))}catch(_:Exception){false}
     }
     fun set(name: String,value: Any?) {require(name=="grants"&&value is JSONArray&&value.length()<=1000);val bytes=value.toString().toByteArray(Charsets.UTF_8);require(bytes.size<=2*1024*1024);write(name,bytes)}
     companion object {
@@ -63,3 +63,4 @@ class ProtectedStore(private val context: Context) {
         private fun quote(text: String): String=buildString{append('"');for(i in text.indices){val c=text[i];when(c){'"'->append("\\\"");'\\'->append("\\\\");'\b'->append("\\b");'\u000c'->append("\\f");'\n'->append("\\n");'\r'->append("\\r");'\t'->append("\\t");else->{val paired=(Character.isHighSurrogate(c)&&i+1<text.length&&Character.isLowSurrogate(text[i+1]))||(Character.isLowSurrogate(c)&&i>0&&Character.isHighSurrogate(text[i-1]));if(c.code<32||(Character.isSurrogate(c)&&!paired))append("\\u"+c.code.toString(16).padStart(4,'0'))else append(c)}}};append('"')}
     }
 }
+

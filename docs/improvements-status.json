@@ -118,8 +118,8 @@
       "title": "Send Windows sound to the phone",
       "plan": "Capture the chosen output, encode it for WebRTC, and handle changes of headphones/speakers with clear status.",
       "acceptance": "Computer sound reaches the phone and recovers after output-device changes.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented the native Windows system-sound bridge into a WebRTC audio track using bounded PCM queues and an AudioWorklet. The Windows build passes. Actual audible output on Android is not yet verified."
     },
     {
       "id": "win-mic",
@@ -127,8 +127,8 @@
       "title": "Use the phone microphone inside Windows apps",
       "plan": "Route received phone audio into the existing virtual microphone path; add mute, level, device selection and guided driver checks.",
       "acceptance": "A separate calling app records the phone microphone through the selected virtual input.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented incoming phone microphone PCM routing to the existing VB-CABLE path, with grant checks, driver detection and explicit included-driver setup. Missing drivers remove microphone permission rather than routing audio into speakers. Physical phone/calling-app tests remain pending."
     },
     {
       "id": "win-life",
@@ -209,7 +209,7 @@
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device controls both a Windows PC and a MacBook.",
       "status": "in_progress",
-      "evidence": "Created the Android app project with embedded shared UI, Android Keystore-protected identity/grant storage, native signing, microphone permission handling and lifecycle pause/resume. APK compilation and device testing are in progress."
+      "evidence": "The Android companion APK compiled successfully using the installed SDK. It embeds the shared client, protects keys with Android Keystore, and asks for microphone access only when requested. Android hardware/runtime testing and release signing remain pending."
     },
     {
       "id": "ios",
@@ -317,7 +317,7 @@
       "plan": "Choose hosting region and costs, configure HTTPS, short-lived secrets, rate limits, retention and operational checks. No secret keys enter client code or the checklist.",
       "acceptance": "The production service has documented ownership, costs and tested availability.",
       "status": "in_progress",
-      "evidence": "Researched zero-cost hosting options and documented actual free-tier limits in remote/HOSTING.md. No paid service was created. Render deployment and a strictly zero-cost relay plan still need account setup and validation."
+      "evidence": "The user-created Render service is live at https://devicebridge-signaling-preview.onrender.com. Its dashboard shows Free, deployed from this repository; /health returns HTTP 200. No upgrade was selected. Signed host-side restoration after service restart is implemented and locally tested; physical recovery and a strictly zero-cost relay remain pending."
     },
     {
       "id": "apple-release",
@@ -390,7 +390,16 @@
       "acceptance": "Identity persists across reload, corrupt data fails closed, and the service verifies a native signature.",
       "status": "done",
       "evidence": "Implemented CurrentUser DPAPI storage and native Ed25519 signatures. All 86 Windows checks pass locally, including eight new native identity/input mapping checks. A Node verification script successfully verified the Windows-generated Unicode signature fixture."
+    },
+    {
+      "id": "free-preview-host",
+      "group": "07 · Packaging, verification and release",
+      "title": "Deploy the signaling preview on a free hosting plan",
+      "plan": "Deploy the reviewed repository blueprint on Render Free, verify the plan and public health endpoint, and avoid paid upgrades.",
+      "acceptance": "Render shows Free and Live for the expected repository commit; public HTTPS health returns successfully.",
+      "status": "done",
+      "evidence": "Verified the signed-in Render dashboard shows devicebridge-signaling-preview as Free and Live, deployed from commit 92337be. Public https://devicebridge-signaling-preview.onrender.com/health returned HTTP 200. The service is a preview, subject to free-tier idle/usage limits."
     }
   ],
-  "stage": "Windows and Android implementation in progress: 65 service/client tests and 86 Windows checks pass locally. Native screen/input and Android app code are being integrated; real-device tests and internet hosting remain pending."
+  "stage": "Windows and Android preview implementation: Android APK builds; Windows builds with 86 regression checks; 68 service/client tests pass locally. Free Render signaling is live. Screen, input and audio still need runtime and physical-device acceptance tests."
 }

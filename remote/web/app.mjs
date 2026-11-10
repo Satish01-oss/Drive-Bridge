@@ -1,13 +1,14 @@
 import {ConnectionClient} from './client/connection.mjs';
 import {BrowserStore} from './client/storage.mjs';
 import {RemotePeer} from './client/peer.mjs';
+import {acquireNativeHost} from './client/native-media.mjs';
 import {toBase64Url} from './shared/signatures.mjs';
 const el=id=>document.getElementById(id),windowsNative=globalThis.chrome?.webview,androidNative=globalThis.DeviceBridgeAndroid,native=windowsNative||(androidNative?{postMessage:value=>androidNative.postMessage(JSON.stringify(value)),addEventListener:(_,listener)=>window.addEventListener('devicebridge-native',event=>listener({data:event.detail}))}:null),pending=new Map();
 let client,role,peer,wanted=false,pageActive=true,retryTimer,retries=0,autoGrant=null,reconnectTimer,mic=false,touchMode=true,resourcesReady=new Map();
 const status=text=>{el('status').textContent=text;};
 const run=action=>async event=>{event?.preventDefault();try{await action();}catch(error){status(error.message);}};
 function rpc(type,payload={}){if(!native)return Promise.reject(Error('Open this in the installed Windows app.'));const rpcId=crypto.randomUUID();return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pending.delete(rpcId);reject(Error('The Windows app did not respond.'));},15000);pending.set(rpcId,{resolve,reject,timeout});native.postMessage({rpcId,type,...payload});});}
-native?.addEventListener('message',event=>{const m=event.data;if(m.rpcId&&pending.has(m.rpcId)){const p=pending.get(m.rpcId);pending.delete(m.rpcId);clearTimeout(p.timeout);m.error?p.reject(Error(m.error)):p.resolve(m.result);}else if(m.type==='frame'){const resource=resourcesReady.get(m.captureId);if(resource)resource.frame(m);else native.postMessage({type:'frame.ack',captureId:m.captureId});}else if(m.type==='native-error')status(m.message);else if(m.type==='capture-error'){peer?.close('transport-failed');status(m.message);}else if(m.type==='native-stop'){autoGrant=null;peer?.close('user');status('Sharing stopped on this computer.');}});
+native?.addEventListener('message',event=>{const m=event.data;if(m.rpcId&&pending.has(m.rpcId)){const p=pending.get(m.rpcId);pending.delete(m.rpcId);clearTimeout(p.timeout);m.error?p.reject(Error(m.error)):p.resolve(m.result);}else if(['frame','sound','mic-ack'].includes(m.type)){const resource=resourcesReady.get(m.captureId);if(resource)resource.handle(m).catch(error=>status(error.message));else if(m.type!=='mic-ack')native.postMessage({type:m.type==='frame'?'frame.ack':'sound.ack',captureId:m.captureId});}else if(m.type==='native-error')status(m.message);else if(m.type==='capture-error'){peer?.close('transport-failed');status(m.message);}else if(m.type==='native-stop'){autoGrant=null;peer?.close('user');status('Sharing stopped on this computer.');}});
 const nativeStore=native?{get:key=>rpc('store.get',{key}),set:(key,value)=>rpc('store.set',{key,value})}:null;
 // CryptoKey objects cannot be sent over JSON. Native identity signing is introduced
 // by the native storage adapter in the next integration stage; browser preview
@@ -44,13 +45,11 @@ async function browserSource(permissions){
 }
 async function acquireHost(grant){
  if(!native){const source=resourcesReady.get(grant.id);if(!source||source.videoTrack.readyState==='ended')throw Error('Select your screen on the computer before connecting.');return source;}
- const capture=await rpc('capture.start',{grantId:grant.id}),canvas=document.createElement('canvas');canvas.width=capture.width;canvas.height=capture.height;const context=canvas.getContext('2d'),stream=canvas.captureStream(12);let drawing=false,stopped=false;
- const source={videoTrack:stream.getVideoTracks()[0],display:{id:capture.displayId,width:capture.width,height:capture.height},frame:async m=>{if(drawing||stopped){native.postMessage({type:'frame.ack',captureId:m.captureId});return;}drawing=true;try{const image=new Image();image.src='data:image/jpeg;base64,'+m.jpeg;await image.decode();if(!stopped)context.drawImage(image,0,0,canvas.width,canvas.height);}finally{drawing=false;native.postMessage({type:'frame.ack',captureId:m.captureId});}},applyInput:input=>native.postMessage({type:'input',captureId:capture.captureId,input}),releaseInput:()=>native.postMessage({type:'input.release',captureId:capture.captureId}),dispose:()=>{stopped=true;stream.getTracks().forEach(t=>t.stop());resourcesReady.delete(capture.captureId);native.postMessage({type:'capture.stop',captureId:capture.captureId});}};
- resourcesReady.set(capture.captureId,source);return source;
+ return acquireNativeHost(grant,{rpc,post:value=>native.postMessage(value),status,resources:resourcesReady});
 }
 function onClient(event){
  if(event.type==='status'){
-  if(event.status==='service-connected'){clearTimeout(retryTimer);retries=0;el('mode').hidden=false;el('connect-service').disabled=false;el('stop-all').hidden=false;status('Connected to the connection service. Choose a mode.');if(autoGrant)scheduleRemote();}
+  if(event.status==='service-connected'){clearTimeout(retryTimer);retries=0;el('mode').hidden=!!native;if(native){role=windowsNative?'host':'controller';el('host').hidden=role!=='host';el('phone').hidden=role!=='controller';el('setup').hidden=true;showDevices();}el('connect-service').disabled=false;el('stop-all').hidden=false;status('Connected to the connection service. Choose a mode.');if(autoGrant)scheduleRemote();}
   if(event.status==='service-offline'&&wanted){status('Connection service unavailable — retrying…');clearTimeout(retryTimer);retryTimer=setTimeout(()=>client.start().catch(()=>{}),Math.min(30000,1000*2**Math.min(retries++,5)));}
  }
  if(event.type==='pairing-request')requestPrompt(event.request);
@@ -90,4 +89,9 @@ const release=e=>{if(!pointer||pointer.id!==e.pointerId)return;if(touchMode)peer
 document.addEventListener('visibilitychange',()=>{if(document.hidden)peer?.sendInput({type:'release-all'});});
 window.addEventListener('devicebridge-pause',()=>{pageActive=false;clearTimeout(reconnectTimer);peer?.sendInput({type:'release-all'});peer?.close('transport-failed');status('Paused while the phone app is in the background.');});
 window.addEventListener('devicebridge-resume',()=>{pageActive=true;if(wanted&&!client?.connected)client?.start().catch(error=>status(error.message));if(autoGrant)scheduleRemote();});
-try{el('service').value=localStorage.getItem('devicebridge-service')||(/^https?:$/.test(location.protocol)?location.origin:'');}catch{}buttons();
+try{el('service').value=localStorage.getItem('devicebridge-service')||(native?'https://devicebridge-signaling-preview.onrender.com':(/^https?:$/.test(location.protocol)?location.origin:''));}catch{}buttons();
+
+if(native)el('connect-service').click();
+
+el('setup-mic').hidden=!windowsNative;el('setup-mic').onclick=run(()=>rpc('driver.setup'));
+

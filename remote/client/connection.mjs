@@ -5,7 +5,7 @@ export class ConnectionClient{
  #base;#store;#fetch;#WebSocket;#identity;#identityProvider;#deviceId;#token;#socket;#generation=0;#stopper=null;#starting=null;#queue=Promise.resolve();#heartbeat;#listeners=new Set();#requests=new Map();#grants=new Map();#sessions=new Map();
  constructor({baseUrl,store,identityProvider=null,fetchImpl=fetch,WebSocketImpl=WebSocket}){
   const u=new URL(baseUrl);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)))throw Error('HTTPS required');if(u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Expected service origin');
-  this.#base=u.origin;this.#store=store;this.#identityProvider=identityProvider;this.#fetch=fetchImpl;this.#WebSocket=WebSocketImpl;
+  this.#base=u.origin;this.#store=store;this.#identityProvider=identityProvider;this.#fetch=fetchImpl.bind(globalThis);this.#WebSocket=WebSocketImpl;
  }
  get deviceId(){return this.#deviceId;}
  get connected(){return this.#socket?.readyState===1;}
@@ -36,6 +36,7 @@ export class ConnectionClient{
    this.#grants.clear();for(const record of await this.#store.get('grants')||[]){try{await this.#knownGrant(record);this.#grants.set(record.grant.id,record);}catch{}}
    current();const challenge=await this.#post('/v1/challenges',{publicKey:this.#identity.publicKey});if(challenge.deviceId!==this.#deviceId||challenge.expiresAt<=Date.now())throw Error('Invalid identity challenge');
    const session=await this.#post('/v1/auth',{challengeId:challenge.challengeId,signature:await this.#sign('auth',challenge)});if(session.deviceId!==this.#deviceId)throw Error('Identity mismatch');this.#token=session.token;
+   for(const record of this.#grants.values())if(record.grant.hostId===this.#deviceId&&record.grant.reconnect)await this.#post('/v1/grants/restore',{record});
    const {ticket}=await this.#post('/v1/socket-ticket',{});current();
    await new Promise((resolve,reject)=>{
     const ws=new this.#WebSocket(this.#base.replace(/^http/,'ws')+'/v1/ws',['devicebridge.v1','ticket.'+ticket]);this.#socket=ws;
@@ -63,6 +64,9 @@ export class ConnectionClient{
    await this.#saveGrant(event.record);this.#emit(event);return;
   }
   if(event.type==='grant-revoked'){this.#grants.delete(event.grantId);this.#sessions.delete(event.grantId);await this.#store.set('grants',this.grants);this.#emit(event);return;}
+  if(event.type==='grant-restored'){
+   const saved=this.#grants.get(event.record?.grant?.id);if(!saved||canonical(saved.grant)!==canonical(event.record.grant))throw Error('Unknown restored grant');await this.#knownGrant(event.record);this.#emit(event);return;
+  }
   if(event.type==='signal'){
    const signed=event.signed,record=this.#grants.get(signed?.grantId);if(!record)throw Error('Untrusted signal');await this.#knownGrant(record);
    const {signature,...content}=signed,g=record.grant,peer=this.#deviceId===g.hostId?g.controllerId:g.hostId,key=peer===g.hostId?record.hostKey:record.controllerKey;
@@ -87,7 +91,7 @@ export class ConnectionClient{
   const record=await this.#post('/v1/requests/'+request.requestId+'/approve',{grant,signature:await this.#sign('grant',grant)});await this.#saveGrant(record);return record;
  }
  async rejectRequest(requestId){return this.#post('/v1/requests/'+requestId+'/reject',{});}
- async revoke(grantId){await this.#post('/v1/grants/'+grantId+'/revoke',{});this.#grants.delete(grantId);this.#sessions.delete(grantId);await this.#store.set('grants',this.grants);}
+ async revoke(grantId){this.#grants.delete(grantId);this.#sessions.delete(grantId);await this.#store.set('grants',this.grants);this.#emit({type:'grant-revoked',grantId});await this.#post('/v1/grants/'+grantId+'/revoke',{});}
  async sendSignal(grantId,message){
   const record=this.#grants.get(grantId);if(!record||!this.connected)throw Error('No active trusted connection');await this.#knownGrant(record);validateMessage(message);if(message.kind!=='signal')throw Error('Invalid signal');
   const g=record.grant,content={grantId,from:this.#deviceId,to:this.#deviceId===g.hostId?g.controllerId:g.hostId,message};

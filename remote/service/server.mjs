@@ -32,7 +32,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
    }
    const path=req.url;if(!path||path.includes('?'))throw new ServiceError('not-found',404);
    if(req.method==='GET'){
-    const assets=new Set(['/index.html','/style.css','/app.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/shared/signatures.mjs','/core/protocol.mjs']),asset=path==='/'?'/index.html':path;
+    const assets=new Set(['/index.html','/style.css','/app.mjs','/pcm-worklet.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/client/native-media.mjs','/shared/signatures.mjs','/core/protocol.mjs']),asset=path==='/'?'/index.html':path;
     if(serveClient&&assets.has(asset)){
      let bytes;try{bytes=await readFile(new URL('../bundle'+asset,import.meta.url));}catch{throw new ServiceError('client-not-built',503);}
      res.writeHead(200,{'Content-Type':asset.endsWith('.html')?'text/html; charset=utf-8':asset.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});res.end(bytes);return;
@@ -50,6 +50,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
    if(path==='/v1/challenges'){exact(body,['publicKey']);result=broker.challenge(body.publicKey);}
    else if(path==='/v1/auth'){exact(body,['challengeId','signature']);result=broker.authenticate(body.challengeId,body.signature);}
    else if(path==='/v1/socket-ticket'){exact(body,[]);result=broker.socketTicket(auth);}
+   else if(path==='/v1/grants/restore'){exact(body,['record']);result=broker.restore(auth,body.record);}
    else if(path==='/v1/pairings'){exact(body,['permissions','reconnect']);result=broker.createPairing(auth,body);}
    else if(path==='/v1/requests'){exact(body,['code']);result=broker.requestPairing(auth,body.code);}
    else if(/^\/v1\/requests\/[A-Za-z0-9_-]{32}\/approve$/.test(path)){exact(body,['grant','signature']);result=broker.approve(auth,path.split('/')[3],body.grant,body.signature);}
@@ -74,7 +75,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
  });
  const send=(id,event)=>{const ws=sockets.get(id);if(!ws||ws.readyState!==WebSocket.OPEN)return;if(ws.bufferedAmount>256*1024){ws.terminate();return;}ws.send(JSON.stringify(event));};
  const notifyPresence=(id,online)=>{for(const peer of new Set(broker.peers({deviceId:id})))send(peer,{type:'presence',deviceId:id,online});};
- const deliver=(id,event)=>{send(id,event);if(event.type==='grant-approved'){const g=event.record.grant,other=id===g.hostId?g.controllerId:g.hostId;send(id,{type:'presence',deviceId:other,online:sockets.has(other)});}};
+ const deliver=(id,event)=>{send(id,event);if(['grant-approved','grant-restored'].includes(event.type)){const g=event.record.grant,other=id===g.hostId?g.controllerId:g.hostId;send(id,{type:'presence',deviceId:other,online:sockets.has(other)});}};
  broker.on('device',deliver);
  wss.on('connection',(ws,auth)=>{
   const prior=sockets.get(auth.deviceId);sockets.set(auth.deviceId,ws);prior?.close(4001,'replaced');ws.alive=true;ws.authExpiresAt=auth.expiresAt;

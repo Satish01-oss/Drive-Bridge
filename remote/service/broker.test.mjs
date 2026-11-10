@@ -75,3 +75,13 @@ test('revocation immediately denies further signaling and emits a stop notificat
 test('expired grants cannot signal or appear in the trusted-device list',()=>{
  const {broker,host,phone,advance,now}=fixture(),{request}=pair(broker,host,phone),record=approve(broker,host,request,now()+1000);advance(1000);assert.equal(broker.grants(phone.auth).length,0);assert.throws(()=>broker.forward(phone.auth,signal(phone,host,record)),/grant-unavailable/);
 });
+test('the host can restore its signed saved consent after an ephemeral service restart',()=>{
+ const {broker,host,phone}=fixture(),{request}=pair(broker,host,phone),record=approve(broker,host,request),fresh=new Broker(),newHost=login(fresh,host.key),newPhone=login(fresh,phone.key);
+ assert.throws(()=>fresh.restore(newPhone.auth,record),/host-restore-only/);fresh.restore(newHost.auth,record);assert.equal(fresh.grants(newPhone.auth)[0].grant.id,record.grant.id);
+ assert.deepEqual(fresh.restore(newHost.auth,record).grant,record.grant);
+});
+test('restoration cannot revive revoked grants, expand permissions or add reconnect consent',()=>{
+ const {broker,host,phone}=fixture(),{request}=pair(broker,host,phone),record=approve(broker,host,request);assert.throws(()=>new Broker().restore(host.auth,{...record,grant:{...record.grant,permissions:['view','input','speaker']}}),/signature/);
+ broker.revoke(host.auth,record.grant.id);assert.throws(()=>broker.restore(host.auth,record),/grant-revoked/);
+ const fresh=new Broker(),next=pair(fresh,host,phone,{reconnect:false}),oneTime=approve(fresh,host,next.request);assert.throws(()=>new Broker().restore(host.auth,oneTime),/invalid-restore/);
+});

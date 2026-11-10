@@ -8,9 +8,9 @@ const permissions=p=>Array.isArray(p)&&p.length>0&&p.includes('view')&&new Set(p
 export function exact(value,keys){deny(value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>keys.includes(k)),'invalid-fields');}
 const alphabet='23456789ABCDEFGHJKLMNPQRSTUVWXYZ';
 export class Broker extends EventEmitter{
- #now; #challenges=new Map(); #auth=new Map(); #tickets=new Map(); #pairings=new Map(); #requests=new Map(); #grants=new Map(); #sessions=new Map(); #rates=new Map();
+ #now; #challenges=new Map(); #auth=new Map(); #tickets=new Map(); #pairings=new Map(); #requests=new Map(); #grants=new Map(); #revoked=new Map(); #restoresDisabled=false; #sessions=new Map(); #rates=new Map();
  constructor({now=()=>Date.now(),capacity=5000}={}){super();this.#now=now;this.capacity=capacity;}
- #prune(){const now=this.#now();for(const map of [this.#challenges,this.#auth,this.#tickets,this.#pairings,this.#requests,this.#grants,this.#rates])for(const [id,row]of map)if(row.expiresAt<=now){map.delete(id);if(map===this.#grants)this.#sessions.delete(id);}}
+ #prune(){const now=this.#now();for(const map of [this.#challenges,this.#auth,this.#tickets,this.#pairings,this.#requests,this.#grants,this.#revoked,this.#rates])for(const [id,row]of map)if(row.expiresAt<=now){map.delete(id);if(map===this.#grants)this.#sessions.delete(id);}}
  #room(map){this.#prune();deny(map.size<this.capacity,'capacity-reached',503);}
  limit(key,max=30){this.#prune();let row=this.#rates.get(key);if(!row){this.#room(this.#rates);this.#rates.set(key,row={count:0,expiresAt:this.#now()+60000});}deny(++row.count<=max,'rate-limited',429);}
  challenge(publicKey){
@@ -57,7 +57,18 @@ export class Broker extends EventEmitter{
  }
  reject(auth,requestId){const r=this.#requests.get(requestId);deny(r&&r.hostId===auth.deviceId&&r.status==='pending','request-unavailable',404);r.status='rejected';this.emit('device',r.controllerId,{type:'pairing-rejected',requestId});return {rejected:true};}
  grants(auth){this.#prune();return [...this.#grants.values()].filter(r=>[r.grant.hostId,r.grant.controllerId].includes(auth.deviceId)).map(r=>structuredClone(r));}
- revoke(auth,grantId){const r=this.#grants.get(grantId);deny(r&&r.grant.hostId===auth.deviceId,'grant-unavailable',404);this.#grants.delete(grantId);this.#sessions.delete(grantId);for(const id of [r.grant.hostId,r.grant.controllerId])this.emit('device',id,{type:'grant-revoked',grantId});return {revoked:true};}
+ revoke(auth,grantId){const r=this.#grants.get(grantId);deny(r&&r.grant.hostId===auth.deviceId,'grant-unavailable',404);this.#prune();if(this.#revoked.size>=this.capacity)this.#restoresDisabled=true;else this.#revoked.set(grantId,{expiresAt:r.expiresAt});this.#grants.delete(grantId);this.#sessions.delete(grantId);for(const id of [r.grant.hostId,r.grant.controllerId])this.emit('device',id,{type:'grant-revoked',grantId});return {revoked:true};}
+ restore(auth,record){
+  this.#prune();exact(record,['grant','signature','hostKey','controllerKey','expiresAt']);const g=record.grant;exact(g,['version','id','requestId','hostId','controllerId','permissions','reconnect','revision','expiresAt']);
+  deny(!this.#restoresDisabled&&!this.#revoked.has(g.id),'grant-revoked',403);
+  deny(record.hostKey===auth.publicKey&&g.hostId===auth.deviceId&&g.controllerId!==auth.deviceId,'host-restore-only',403);
+  let controller;try{controller=publicIdentity(record.controllerKey);}catch{throw new ServiceError('invalid-controller');}
+  deny(g.version===1&&typeof g.id==='string'&&/^[A-Za-z0-9_-]{16,96}$/.test(g.id)&&g.controllerId===controller.id&&g.reconnect===true&&Number.isSafeInteger(g.revision)&&g.revision>=1&&permissions(g.permissions)&&Number.isSafeInteger(g.expiresAt)&&g.expiresAt>this.#now()&&g.expiresAt<=this.#now()+7*86400000,'invalid-restore');
+  deny(verifiedSignature(auth.publicKey,'grant',g,record.signature),'invalid-signature',401);
+  const existing=this.#grants.get(g.id);if(existing){deny(existing.signature===record.signature,'grant-conflict',409);return structuredClone(existing);}
+  this.#room(this.#grants);const saved={grant:structuredClone(g),signature:record.signature,hostKey:record.hostKey,controllerKey:record.controllerKey,expiresAt:g.expiresAt};this.#grants.set(g.id,saved);
+  for(const id of [g.hostId,g.controllerId])this.emit('device',id,{type:'grant-restored',record:structuredClone(saved)});return structuredClone(saved);
+ }
  peers(auth){return this.grants(auth).map(r=>r.grant.hostId===auth.deviceId?r.grant.controllerId:r.grant.hostId);}
  forward(auth,signed){
   exact(signed,['grantId','from','to','message','signature']);const {signature,...content}=signed;this.#prune();const record=this.#grants.get(content.grantId);deny(record,'grant-unavailable',403);

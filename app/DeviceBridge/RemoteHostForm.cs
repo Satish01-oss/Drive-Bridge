@@ -21,9 +21,12 @@ internal sealed class RemoteHostForm : Form
     bool allowInput;
     long grantExpiresAt;
     CancellationTokenSource? captureStop;
-    sealed class FrameState { public int Pending; }
+    sealed class FrameState { public int Pending; public int AudioPending; }
     FrameState? frameState;
     string? displayId;
+    AudioBridge? remoteAudio;
+    bool allowMicrophone;
+    int microphoneDevice = -2;
     public bool QuitRequested { get; private set; }
     public RemoteHostForm(bool designPreview = false)
     {
@@ -103,6 +106,14 @@ internal sealed class RemoteHostForm : Form
                 case "capture.start": result = StartCapture(request.GetProperty("grantId").GetString()!); break;
                 case "capture.stop": if (Matches(request)) StopCapture(); break;
                 case "frame.ack": if (Matches(request) && frameState is { } state) Interlocked.Exchange(ref state.Pending, 0); break;
+                case "sound.ack": if (Matches(request) && frameState is { } audioState) { if (Interlocked.Decrement(ref audioState.AudioPending) < 0) Interlocked.Exchange(ref audioState.AudioPending, 0); } break;
+                case "mic.format":
+                    CheckMicrophone(request); remoteAudio!.Receive(new Packet("mic-format", Text: "pcm", A: request.GetProperty("sampleRate").GetInt32(), B: 16, C: 1), "mic", microphoneDevice); break;
+                case "mic.data":
+                    CheckMicrophone(request); var encoded = request.GetProperty("data").GetString()!; if (encoded.Length > 16384) throw new IOException("Microphone packet is too large.");
+                    var data = Convert.FromBase64String(encoded); if (data.Length % 2 != 0 || data.Length > 8192) throw new IOException("Invalid microphone data."); remoteAudio!.Receive(new Packet("mic", Data: data), "mic", microphoneDevice); Post(new { type = "mic-ack", captureId }); break;
+                case "driver.setup":
+                    if (designPreview) throw new IOException("Driver setup is disabled in design preview."); EmergencyStop(); using (var setup = new MicrophoneSetupForm()) setup.ShowDialog(this); break;
                 case "input.release": if (Matches(request)) input.Release(); break;
                 case "input":
                     if (!Matches(request) || !allowInput) throw new IOException("Remote input is not authorized.");
@@ -116,6 +127,11 @@ internal sealed class RemoteHostForm : Form
         catch (Exception error) { if (rpcId != null) Post(new { rpcId, error = error.Message }); else Post(new { type = "native-error", message = error.Message }); }
     }
     bool Matches(JsonElement request) => captureId != null && request.TryGetProperty("captureId", out var id) && id.GetString() == captureId;
+    void CheckMicrophone(JsonElement request)
+    {
+        if (!Matches(request) || !allowMicrophone || remoteAudio == null || microphoneDevice < 0) throw new IOException("Phone microphone routing is not permitted or the included driver is not installed.");
+        if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= grantExpiresAt) { StopCapture(); throw new IOException("Remote approval expired."); }
+    }
     object StartCapture(string grantId)
     {
         if (designPreview) throw new IOException("Screen sharing is disabled in design preview.");
@@ -126,6 +142,20 @@ internal sealed class RemoteHostForm : Form
         int width = Math.Min(1280, captureBounds.Width), height = Math.Max(1, (int)Math.Round(captureBounds.Height * (width / (double)captureBounds.Width)));
         displayId = Guid.NewGuid().ToString("N"); frameState = new FrameState(); var frames = frameState;
         string session = captureId; var bounds = captureBounds; captureStop = new CancellationTokenSource(); var token = captureStop.Token;
+        var effective = permissions.Where(p => p != null).Cast<string>().ToList(); var audioErrors = new List<string>(); Packet? soundFormat = null;
+        microphoneDevice = permissions.Contains("microphone") ? DriverBundle.CableOutputId() : -2; allowMicrophone = permissions.Contains("microphone") && microphoneDevice >= 0;
+        if (permissions.Contains("microphone") && !allowMicrophone) { effective.Remove("microphone"); audioErrors.Add("Install the included microphone driver on this PC to use the phone microphone."); }
+        remoteAudio = new AudioBridge(packet =>
+        {
+            if (packet.Kind == "sound-format") { soundFormat = packet; return true; }
+            if (packet.Kind != "sound" || packet.Data == null || token.IsCancellationRequested || captureId != session) return false;
+            if (Interlocked.Increment(ref frames.AudioPending) > 8) { Interlocked.Decrement(ref frames.AudioPending); return false; }
+            var sound = Convert.ToBase64String(packet.Data);
+            try { BeginInvoke(() => { if (captureId == session && !token.IsCancellationRequested) Post(new { type = "sound", captureId = session, data = sound }); }); return true; }
+            catch (InvalidOperationException) { Interlocked.Decrement(ref frames.AudioPending); return false; }
+        });
+        if (permissions.Contains("speaker")) try { remoteAudio.StartCapture(false); } catch (Exception error) { effective.Remove("speaker"); audioErrors.Add("Computer sound: " + error.Message); }
+        var expires = grantExpiresAt;
         _ = Task.Run(async () =>
         {
             var encoder = ImageCodecInfo.GetImageEncoders().First(c => c.FormatID == ImageFormat.Jpeg.Guid);
@@ -135,6 +165,7 @@ internal sealed class RemoteHostForm : Form
                 using var clock = new PeriodicTimer(TimeSpan.FromMilliseconds(83));
                 while (await clock.WaitForNextTickAsync(token))
                 {
+                    if (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() >= expires) throw new IOException("Remote approval expired.");
                     if (Interlocked.CompareExchange(ref frames.Pending, 1, 0) != 0) continue;
                     using var original = new Bitmap(bounds.Width, bounds.Height, PixelFormat.Format24bppRgb); using (var graphics = Graphics.FromImage(original)) graphics.CopyFromScreen(bounds.Location, Point.Empty, bounds.Size);
                     using var scaled = new Bitmap(width, height); using (var graphics = Graphics.FromImage(scaled)) graphics.DrawImage(original, new Rectangle(0, 0, width, height));
@@ -145,9 +176,9 @@ internal sealed class RemoteHostForm : Form
             catch (OperationCanceledException) { }
             catch (Exception error) { if (!token.IsCancellationRequested && !IsDisposed) try { BeginInvoke(() => { if (captureId == session) { StopCapture(); Post(new { type = "capture-error", message = error.Message }); } }); } catch (InvalidOperationException) { } }
         }, token);
-        return new { captureId, width, height, displayId };
+        return new { captureId, width, height, displayId, permissions = effective.ToArray(), soundFormat = soundFormat == null ? null : new { sampleRate = soundFormat.A, bits = soundFormat.B, channels = soundFormat.C, encoding = soundFormat.Text }, audioError = string.Join(" ", audioErrors) };
     }
-    void StopCapture() { captureId = null; displayId = null; frameState = null; allowInput = false; captureStop?.Cancel(); captureStop?.Dispose(); captureStop = null; input.Release(); }
+    void StopCapture() { captureId = null; displayId = null; frameState = null; allowInput = false; allowMicrophone = false; captureStop?.Cancel(); captureStop?.Dispose(); captureStop = null; remoteAudio?.Dispose(); remoteAudio = null; input.Release(); }
     [DllImport("user32.dll")] static extern bool RegisterHotKey(nint window, int id, uint modifiers, uint key);
     [DllImport("user32.dll")] static extern bool UnregisterHotKey(nint window, int id);
 }

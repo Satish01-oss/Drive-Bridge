@@ -74,7 +74,7 @@ export class RemotePeer{
     if(!this.#ready){
      if(this.#role==='host'){
       if(m.kind!=='session.open'||m.seq!==0||m.payload.deviceId!==g.controllerId||m.payload.grantId!==g.id||m.payload.permissionRevision!==g.revision||m.payload.permissions.some(p=>!g.permissions.includes(p)))throw Error('Control permission rejected');
-      this.#permissions=[...m.payload.permissions];this.displayInfo=this.#resources.display;this.#send('session.ready',{permissions:this.#permissions,permissionRevision:g.revision,display:this.displayInfo});
+      this.#permissions=m.payload.permissions.filter(p=>(this.#resources.permissions||g.permissions).includes(p));this.displayInfo=this.#resources.display;this.#send('session.ready',{permissions:this.#permissions,permissionRevision:g.revision,display:this.displayInfo});
      }else{
       if(m.kind!=='session.ready'||m.seq!==0||m.payload.permissionRevision!==g.revision||!m.payload.display||m.payload.permissions.some(p=>!g.permissions.includes(p)))throw Error('Unexpected control acceptance');this.#permissions=[...m.payload.permissions];this.displayInfo=m.payload.display;
      }

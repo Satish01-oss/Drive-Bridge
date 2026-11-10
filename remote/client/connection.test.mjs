@@ -34,3 +34,6 @@ test('explicit stop cancels an in-flight service authentication request',async()
 test('non-local HTTP service URLs are rejected before any credentials are sent',()=>{
  assert.throws(()=>new ConnectionClient({baseUrl:'http://public.example',store:new MemoryStore(),WebSocketImpl:WebSocket}),/HTTPS/);assert.throws(()=>new ConnectionClient({baseUrl:'https://user:pass@example.com',store:new MemoryStore(),WebSocketImpl:WebSocket}),/origin/);
 });
+test('browser fetch is invoked with the correct global receiver',async t=>{
+ const f=await fixture(t);let calls=0;const client=new ConnectionClient({baseUrl:f.url,store:new MemoryStore(),WebSocketImpl:WebSocket,fetchImpl:function(...args){assert.equal(this,globalThis);calls++;return fetch(...args);}});t.after(()=>client.stop());await client.start();assert.ok(calls>=3);
+});
