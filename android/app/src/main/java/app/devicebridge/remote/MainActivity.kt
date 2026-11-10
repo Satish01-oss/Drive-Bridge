@@ -10,6 +10,10 @@ import android.os.Bundle
 import android.webkit.*
 import android.widget.FrameLayout
 import androidx.webkit.WebViewAssetLoader
+import androidx.core.view.ViewCompat
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import org.json.JSONObject
 import java.util.concurrent.Executors
 
@@ -19,12 +23,15 @@ class MainActivity: Activity() {
     private val worker=Executors.newSingleThreadExecutor()
     private val updateWorker=Executors.newSingleThreadExecutor()
     private lateinit var updater:AppUpdater
+    private var fullscreen=false
     private var microphoneRequest: PermissionRequest?=null
     private val origin="https://appassets.androidplatform.net"
     override fun onCreate(state: Bundle?) {
         super.onCreate(state);storage=ProtectedStore(this);updater=AppUpdater(this);web=WebView(this)
         val root=FrameLayout(this);root.setBackgroundColor(Color.rgb(245,247,239));root.addView(web);setContentView(root)
-        if(Build.VERSION.SDK_INT>=30){window.setDecorFitsSystemWindows(false);root.setOnApplyWindowInsetsListener{view,insets->val safe=insets.getInsets(android.view.WindowInsets.Type.systemBars() or android.view.WindowInsets.Type.ime());view.setPadding(safe.left,safe.top,safe.right,safe.bottom);insets}}
+        WindowCompat.setDecorFitsSystemWindows(window,false)
+        ViewCompat.setOnApplyWindowInsetsListener(root){view,insets->val safe=insets.getInsets(WindowInsetsCompat.Type.systemBars() or WindowInsetsCompat.Type.ime() or WindowInsetsCompat.Type.displayCutout());view.setPadding(safe.left,safe.top,safe.right,safe.bottom);insets}
+        if(Build.VERSION.SDK_INT>=33)onBackInvokedDispatcher.registerOnBackInvokedCallback(android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT){handleBack()}
         web.setBackgroundColor(Color.rgb(245,247,239));web.settings.apply{javaScriptEnabled=true;domStorageEnabled=true;allowFileAccess=false;allowContentAccess=false;mixedContentMode=WebSettings.MIXED_CONTENT_NEVER_ALLOW;mediaPlaybackRequiresUserGesture=false;safeBrowsingEnabled=true}
         WebView.setWebContentsDebuggingEnabled(false)
         val loader=WebViewAssetLoader.Builder().addPathHandler("/assets/",WebViewAssetLoader.AssetsPathHandler(this)).build()
@@ -51,12 +58,16 @@ class MainActivity: Activity() {
                 "app.update.check"->updater.check()
                 "app.update.download"->updater.prepare()
                 "app.update.install"->{val result=java.util.concurrent.CompletableFuture<JSONObject>();runOnUiThread{try{check(!isFinishing&&!isDestroyed){"Reopen DeviceBridge to install the update"};result.complete(updater.install())}catch(error:Exception){result.completeExceptionally(error)}};result.get(15,java.util.concurrent.TimeUnit.SECONDS)}
+                "display.fullscreen"->{val result=java.util.concurrent.CompletableFuture<JSONObject>();val enabled=request.getBoolean("enabled");runOnUiThread{try{setFullscreen(enabled);result.complete(JSONObject().put("fullscreen",fullscreen))}catch(error:Exception){result.completeExceptionally(error)}};result.get(15,java.util.concurrent.TimeUnit.SECONDS)}
                 else->throw IllegalArgumentException("This Android app controls the PC; it does not host a desktop.")
             };reply(JSONObject().put("rpcId",rpcId).put("result",result?:JSONObject.NULL))}
             catch(error:Exception){val cause=error.cause?:error;val message=if(updateCall&&(cause is java.net.UnknownHostException||cause is java.net.SocketTimeoutException))"Check your internet connection and try the update again." else cause.message?:"The app could not finish this action. Please try again.";reply(JSONObject().put("rpcId",rpcId).put("error",message))}
         }}
     }
     private fun reply(value:JSONObject){runOnUiThread{if(!isFinishing&&!isDestroyed)web.evaluateJavascript("window.dispatchEvent(new CustomEvent('devicebridge-native',{detail:"+value.toString()+"}));",null)}}
+    private fun setFullscreen(enabled:Boolean){fullscreen=enabled;val controller=WindowInsetsControllerCompat(window,web);controller.systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;if(enabled)controller.hide(WindowInsetsCompat.Type.systemBars())else controller.show(WindowInsetsCompat.Type.systemBars())}
+    private fun handleBack(){if(fullscreen){setFullscreen(false);web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-exit-fullscreen'));",null)}else finish()}
+    @Suppress("DEPRECATION","OVERRIDE_DEPRECATION") override fun onBackPressed(){handleBack()}
     override fun onRequestPermissionsResult(code:Int,permissions:Array<out String>,results:IntArray){super.onRequestPermissionsResult(code,permissions,results);if(code==41){val request=microphoneRequest;microphoneRequest=null;if(results.firstOrNull()==PackageManager.PERMISSION_GRANTED)request?.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))else request?.deny()}}
     override fun onPause(){super.onPause();microphoneRequest?.deny();microphoneRequest=null;web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-pause')); "){web.onPause()}}
     override fun onResume(){super.onResume();if(::web.isInitialized){web.onResume();web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-resume'));",null)}}

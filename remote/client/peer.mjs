@@ -28,6 +28,7 @@ export class RemotePeer{
  get ready(){return this.#ready&&!this.#closed;}
  get display(){return this.displayInfo;}
  get permissions(){return [...this.#permissions];}
+ get approvedPermissions(){return [...this.#record.grant.permissions];}
  async diagnostics(){
   const report={ready:this.ready,connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0};
   try{const stats=await this.#pc.getStats();for(const row of stats.values()){

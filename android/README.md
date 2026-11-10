@@ -50,6 +50,15 @@ not an unlimited uptime guarantee.
 
 ## Remove a computer and update inside the app
 
+Preview 7 adds **Fullscreen** and **☰ Tools** to the connected screen. Android
+system bars hide while fullscreen is active; swipe at an edge to reveal them,
+or use Exit fullscreen / Android Back to return. Touch, right-click, scroll,
+sound, microphone, Enter/Tab/Escape, Select all, Copy and Paste remain in Tools.
+The typing field and Send stay in a separate bottom bar. Window insets reserve
+space for the keyboard and display cutout; rotating does not reload the app.
+Physical portrait/landscape/keyboard acceptance is recorded separately from
+the browser layout checks and native compilation.
+
 From preview 6, **Trusted devices → Remove PC** deletes that computer's saved
 approval on the phone before any network request and ends the active session.
 When online, the broker also notifies the computer and removes that approval.
@@ -57,7 +66,7 @@ If offline, removal remains local; the computer may still list the phone.
 Pair again from the computer to regain access.
 
 **App updates** checks the public preview descriptor automatically at launch.
-The feed at `dist/android-update.json` is refreshed by GitHub Pages when a
+The feed source at `frontend/site/android-update.json` is refreshed in the website build when a
 published release includes an `Android-update.json` descriptor and its APK.
 The website verifies the descriptor against GitHub asset hashes before serving
 it. Each descriptor has `schema:1`, the release `tag`, exact source commit and

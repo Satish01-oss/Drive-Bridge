@@ -1,4 +1,5 @@
 import test from 'node:test';import assert from 'node:assert/strict';import {once} from 'node:events';
+import {execFileSync} from 'node:child_process';import {fileURLToPath} from 'node:url';
 import {WebSocket} from 'ws';import {createService} from './server.mjs';import {identity,grantFor,signal} from './test-helpers.mjs';
 async function appFor(t){const app=createService();const address=await app.listen();t.after(()=>app.close());const base=`http://127.0.0.1:${address.port}`;
  const request=async(path,body,token,options={})=>{const res=await fetch(base+path,{method:body===undefined?'GET':'POST',headers:{...(body!==undefined?{'content-type':'application/json'}:{}),...(token?{authorization:'Bearer '+token}:{}),...options.headers},body:body!==undefined?JSON.stringify(body):undefined});return {status:res.status,body:await res.json()};};
@@ -8,6 +9,12 @@ function socketClient(url,ticket){const ws=new WebSocket(url,['devicebridge.v1',
  ws.on('message',data=>{const e=JSON.parse(data);const i=waiters.findIndex(w=>w.type===e.type);if(i>=0){const [w]=waiters.splice(i,1);clearTimeout(w.timer);w.resolve(e);}else queue.push(e);});
  return {ws,event:type=>{const i=queue.findIndex(e=>e.type===type);if(i>=0)return Promise.resolve(queue.splice(i,1)[0]);return new Promise((resolve,reject)=>{const w={type,resolve,timer:setTimeout(()=>{const i=waiters.indexOf(w);if(i>=0)waiters.splice(i,1);reject(Error('Timed out waiting for '+type));},3000)};waiters.push(w);});}};
 }
+
+test('the public client can load its fullscreen stylesheet and controller module',async t=>{
+ execFileSync(process.execPath,[fileURLToPath(new URL('../scripts/build-client.mjs',import.meta.url))]);
+ const app=createService({serveClient:true}),address=await app.listen();t.after(()=>app.close());
+ for(const asset of ['/','/app.mjs','/fullscreen.css','/controller-display.mjs']){const response=await fetch(`http://127.0.0.1:${address.port}`+asset);assert.equal(response.status,200,asset+' must load before pairing');assert.ok((await response.text()).length>100);}
+});
 test('HTTP authentication and host approval produce a verifiable grant across real sockets',async t=>{
  const {request,login}=await appFor(t),host=await login(),phone=await login();assert.equal((await request('/v1/grants')).status,401);
  const p=(await request('/v1/pairings',{permissions:['view','input'],reconnect:true},host.token)).body,r=(await request('/v1/requests',{code:p.code},phone.token)).body;

@@ -1,0 +1,22 @@
+.session-actions{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.session-actions button{font-size:12px;padding:10px 12px;min-height:40px;margin:4px 0}
+#remote-tools-panel{padding:2px 0 10px}
+.remote-tools button{min-height:42px}
+body.remote-fullscreen{overflow:hidden;background:#101b17}
+body.remote-fullscreen>header,body.remote-fullscreen main>:not(#remote){display:none!important}
+body.remote-fullscreen main{padding:0;margin:0;max-width:none}
+body.remote-fullscreen #remote{position:fixed;inset:0;z-index:1000;display:flex;flex-direction:column;margin:0;background:#101b17;overflow:hidden}
+body.remote-fullscreen .session-bar{flex:0 0 auto;margin:0;padding:4px 10px;background:#f5f7ef;min-height:48px}
+body.remote-fullscreen #session-title{font-size:12px;white-space:nowrap}
+body.remote-fullscreen #screen-wrap{flex:1 1 0;min-height:0;border-radius:0;display:flex;align-items:center;justify-content:center}
+body.remote-fullscreen video{height:100%;width:100%;min-height:0;max-height:none;object-fit:contain}
+body.remote-fullscreen #screen-placeholder{inset:25% 8%;font-size:13px}
+body.remote-fullscreen #remote-tools-panel{position:absolute;right:8px;top:54px;z-index:5;width:min(360px,calc(100% - 16px));max-height:calc(100% - 140px);overflow-y:auto;overscroll-behavior:contain;background:#f5f7ef;border:1px solid #c8d3bf;border-radius:14px;padding:10px;box-shadow:0 10px 35px #0005}
+body.remote-fullscreen .remote-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+body.remote-fullscreen .remote-tools+.remote-tools{margin-top:6px;border-top:1px solid #d9e1d2;padding-top:6px}
+body.remote-fullscreen .remote-tools button{margin:0;padding:9px 6px;font-size:11px;overflow-wrap:anywhere}
+body.remote-fullscreen #typing{flex:0 0 auto;margin:0;background:#f5f7ef;padding:6px 10px 8px}
+body.remote-fullscreen #typing label{font-size:11px;margin:0 0 3px}
+body.remote-fullscreen .typing-row input{min-width:0;padding:10px 12px;min-height:42px}
+body.remote-fullscreen .typing-row button{margin:0;min-height:42px;padding:10px 16px}
+@media(max-width:600px){body.remote-fullscreen #session-title{display:none}body.remote-fullscreen .session-bar{justify-content:flex-end}.session-bar{flex-wrap:wrap}.session-actions{margin-left:auto}}

@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "91 shared/service/peer/audio tests pass locally. Phone removal now ends access on both online endpoints, persists local removal while offline, rejects unrelated devices and stops safely if protected storage fails. A returning computer discards a phone-removed approval without becoming unusable. Screen/input/audio/outage acceptance remains in the parent tasks."
+      "evidence": "91 shared/service/peer/audio tests pass locally. Phone removal now ends access on both online endpoints, persists local removal while offline, rejects unrelated devices and stops safely if protected storage fails. A returning computer discards a phone-removed approval without becoming unusable. Screen/input/audio/outage acceptance remains in the parent tasks. The latest 95-test suite also covers fullscreen cancellation and public loading of the new stylesheet/controller module."
     },
     {
       "id": "native-protected-identity",
@@ -515,7 +515,7 @@
       "plan": "Use Android immersive fullscreen, keep the computer screen fitted to the available area, place touch/right-click/scroll/sound/microphone/shortcut controls in a hamburger Tools menu, and keep text plus Send at the bottom.",
       "acceptance": "On a physical Android phone, fullscreen opens/exits, Tools exposes every existing control, and text/Send remain usable in both orientations with the keyboard open.",
       "status": "in_progress",
-      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending."
+      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending. The final bundle also distinguishes unavailable microphone permission from missing Windows routing setup, and disables audio controls when the effective grant does not allow them. Native Android compilation and nine native tests pass; shared coverage is now 95 tests. Preview 7 is being packaged for delivery through the preview 6 updater."
     },
     {
       "id": "frontend-separation",
@@ -533,7 +533,7 @@
       "plan": "Create the DeviceBridge frontend project in the verified Satish Vercel team, deploy the tested static build from GitHub, and check the public page and actual app download.",
       "acceptance": "A public Vercel URL loads the website and downloads the verified versioned Windows installer; the connection service stays on Render.",
       "status": "done",
-      "evidence": "Deployed source 533ce937cafefd711289f5391f155fdb1a0094f8 to devicebridge-frontend in the verified Satish Vercel Hobby team. Production deployment dpl_EhvpAMML2xH2ZBKoF9ni6Bk1JRTe is READY at https://devicebridge-frontend.vercel.app/. Unauthenticated homepage, release manifest, preview page, update feed and checklist return 200. The browser Download button reconstructed and SHA-256 checked the 65,153,291-byte Windows 0.8.0 installer and showed 100% App checked and ready. Git context confirms the project is linked to Satish01-oss/Drive-Bridge. No paid resources were enabled; the connection backend stays on Render."
+      "evidence": "Deployed source 533ce937cafefd711289f5391f155fdb1a0094f8 to devicebridge-frontend in the verified Satish Vercel Hobby team. Production deployment dpl_EhvpAMML2xH2ZBKoF9ni6Bk1JRTe is READY at https://devicebridge-frontend.vercel.app/. Unauthenticated homepage, release manifest, preview page, update feed and checklist return 200. The browser Download button reconstructed and SHA-256 checked the 65,153,291-byte Windows 0.8.0 installer and showed 100% App checked and ready. Git context confirms the project is linked to Satish01-oss/Drive-Bridge. No paid resources were enabled; the connection backend stays on Render. A subsequent Git push (58109cc) automatically produced READY production deployment dpl_HPb8e9q3nbbHC8ER9RH4pYQ7niPq, confirming Git-linked website updates."
     },
     {
       "id": "phone-microphone-availability",
@@ -542,7 +542,7 @@
       "plan": "Check the active host permission grant and effective audio capability. Explain missing permission or driver setup clearly, then test the phone microphone after explicit Windows approval.",
       "acceptance": "The phone microphone control is available for an approved microphone grant and a Windows recording app receives the phone audio.",
       "status": "in_progress",
-      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet."
+      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet. Added an explicit phone-side explanation for a microphone not included in the grant and a separate setup instruction when the host approved it but native routing is unavailable. These messages do not bypass host consent. A fresh microphone-approved physical test is still pending."
     },
     {
       "id": "fullscreen-layout-checks",
@@ -554,5 +554,5 @@
       "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
     }
   ],
-  "stage": "Vercel frontend is live with the browser installer integrity check passed. The repository separates frontend/site source, generated frontend/dist and the Render backend. Android preview 6 preserves saved devices and reads its update feed. Fullscreen preview 7 is implemented and layout-tested but awaits packaging and physical acceptance. Phone microphone permission/routing remains under investigation."
+  "stage": "Vercel frontend is live and automatic Git-push deployment is verified. Packaging fullscreen preview 7 for the Android in-app updater: portrait/landscape/reduced-height layouts and 95 shared checks pass. Native Android checks: 9. Microphone controls now explain missing grant versus routing setup; physical microphone approval/audio testing remains pending."
 }
