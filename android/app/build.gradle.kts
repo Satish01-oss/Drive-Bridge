@@ -2,7 +2,7 @@ plugins { id("com.android.application") }
 android {
     namespace = "app.devicebridge.remote"
     compileSdk = 37
-    defaultConfig { applicationId = "app.devicebridge.remote"; minSdk = 26; targetSdk = 37; versionCode = 905; versionName = "0.9.0-preview.5" }
+    defaultConfig { applicationId = "app.devicebridge.remote"; minSdk = 26; targetSdk = 37; versionCode = 906; versionName = "0.9.0-preview.6" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     sourceSets.getByName("main").assets.srcDir("../../remote/bundle")
     signingConfigs {
@@ -13,4 +13,4 @@ android {
     }
     buildTypes { getByName("release") { isMinifyEnabled = false; if(signingConfigs.findByName("releaseIdentity") != null) signingConfig = signingConfigs.getByName("releaseIdentity") } }
 }
-dependencies { implementation("androidx.webkit:webkit:1.16.0"); implementation("org.bouncycastle:bcprov-jdk18on:1.86"); testImplementation("junit:junit:4.13.2") }
+dependencies { implementation("androidx.webkit:webkit:1.16.0"); implementation("androidx.core:core:1.17.0"); implementation("org.bouncycastle:bcprov-jdk18on:1.86"); testImplementation("junit:junit:4.13.2") }

@@ -25,3 +25,4 @@ android/local.properties
 **/remote-contract-result.json
 **/setup-report.txt
 **/audio-capture-check.txt
+android/.kotlin/

@@ -1,6 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, dirname, relative } from 'node:path';
+import { validateDescriptor } from './sync-android-update.mjs';
 
 const root = resolve('dist');
 async function localFile(path) {
@@ -41,6 +42,7 @@ for (const name of ['index.html', 'test.html', 'credits.html', 'remote-preview.h
 }
 const preview=JSON.parse(await localFile(resolve(root,'remote-preview.json')));
 const previewPage=(await localFile(resolve(root,'remote-preview.html'))).toString();
+if(!Number.isInteger(preview.android.versionCode)||preview.android.versionCode<1||preview.android.versionName!==preview.tag.slice(1))throw Error('Android update version metadata is invalid');
 if(!/^v\d+\.\d+\.\d+-preview\.\d+$/.test(preview.tag)||!/^[a-f0-9]{40}$/.test(preview.source))throw Error('Preview source identity is invalid');
 for(const [platform,extension] of [['windows','.exe'],['android','.apk']]){
   const asset=preview[platform];
@@ -48,3 +50,5 @@ for(const [platform,extension] of [['windows','.exe'],['android','.apk']]){
   if(!asset.filename.endsWith(extension)||asset.url!==expected||!/^[a-f0-9]{64}$/.test(asset.sha256)||!(asset.bytes>0)||!previewPage.includes('href="'+asset.url+'"'))throw Error('Preview download metadata mismatch: '+platform);
 }
 console.log('Preview links match source-pinned release metadata');
+validateDescriptor(JSON.parse(await localFile(resolve(root,'android-update.json'))));
+console.log('Android in-app update feed metadata verified');

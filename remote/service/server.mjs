@@ -56,6 +56,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
    else if(/^\/v1\/requests\/[A-Za-z0-9_-]{32}\/approve$/.test(path)){exact(body,['grant','signature']);result=broker.approve(auth,path.split('/')[3],body.grant,body.signature);}
    else if(/^\/v1\/requests\/[A-Za-z0-9_-]{32}\/reject$/.test(path)){exact(body,[]);result=broker.reject(auth,path.split('/')[3]);}
    else if(/^\/v1\/grants\/[A-Za-z0-9_-]{16,96}\/revoke$/.test(path)){exact(body,[]);result=broker.revoke(auth,path.split('/')[3]);}
+   else if(/^\/v1\/grants\/[A-Za-z0-9_-]{16,96}\/leave$/.test(path)){exact(body,[]);result=broker.leave(auth,path.split('/')[3]);}
    else throw new ServiceError('not-found',404);
    json(res,200,result);
   }catch(error){if(!res.headersSent)json(res,error instanceof ServiceError?error.status:500,{error:error instanceof ServiceError?error.code:'internal-error'});else res.end();}

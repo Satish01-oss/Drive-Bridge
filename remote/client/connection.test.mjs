@@ -24,6 +24,32 @@ test('trusted identity and approval survive client stop/start without a fresh ke
 test('client revocation removes trust on both peers and blocks more signaling',async t=>{
  const f=await fixture(t),record=await paired(f);await f.host.revoke(record.grant.id);await f.phoneEvent('grant-revoked');assert.equal(f.host.grants.length,0);assert.equal(f.phone.grants.length,0);await assert.rejects(f.phone.sendSignal(record.grant.id,message(id(),1,0)),/trusted/);
 });
+
+test('a phone can remove its own computer, close access on both peers and prevent restoration',async t=>{
+ const f=await fixture(t),record=await paired(f);assert.deepEqual(await f.phone.forget(record.grant.id),{removed:true,computerNotified:true});await f.hostEvent('grant-revoked');
+ assert.equal(f.phone.grants.length,0);assert.equal(f.host.grants.length,0);assert.throws(()=>f.service.broker.restore({deviceId:record.grant.hostId,publicKey:record.hostKey},record),/grant-revoked/);
+ await assert.rejects(f.phone.sendSignal(record.grant.id,message(id(),1,0)),/trusted/);
+});
+
+test('offline phone removal stays removed after restarting the app and never trusts the server listing',async t=>{
+ const f=await fixture(t),record=await paired(f);f.phone.stop();assert.deepEqual(await f.phone.forget(record.grant.id),{removed:true,computerNotified:false});
+ await f.phone.start();assert.equal(f.phone.grants.length,0);assert.equal(f.host.grants.length,1,'an offline removal cannot claim to have notified the computer');
+ await assert.rejects(f.phone.sendSignal(record.grant.id,message(id(),1,0)),/trusted/);
+});
+
+test('a computer returning after phone removal discards its revoked saved approval and stays usable',async t=>{
+ const f=await fixture(t),record=await paired(f);f.host.stop();assert.equal((await f.phone.forget(record.grant.id)).computerNotified,true);await f.host.start();assert.equal(f.host.connected,true);assert.equal(f.host.grants.length,0);await f.host.createPairing({permissions:['view'],reconnect:false});
+});
+
+test('a failed protected-store write stops the phone instead of claiming durable removal',async t=>{
+ const backing=new MemoryStore();let refuse=false;const phoneStore={get:key=>backing.get(key),set:async(key,value)=>{if(refuse&&key==='grants')throw Error('disk full');await backing.set(key,value);}};
+ const f=await fixture(t,{phoneStore}),record=await paired(f);refuse=true;await assert.rejects(f.phone.forget(record.grant.id),/could not save/);assert.equal(f.phone.connected,false);await f.phoneEvent('grant-revoked');
+});
+
+test('a host cannot use the phone removal action and an unrelated phone cannot remove another grant',async t=>{
+ const f=await fixture(t),record=await paired(f);await assert.rejects(f.host.forget(record.grant.id),/Only this phone/);
+ assert.throws(()=>f.service.broker.leave({deviceId:id()},record.grant.id),/grant-unavailable/);assert.equal(f.host.grants.length,1);
+});
 test('rejecting the host prompt leaves the phone without a trusted grant',async t=>{
  const f=await fixture(t),p=await f.host.createPairing(),r=await f.phone.requestPairing(p.code);await f.host.rejectRequest(r.requestId);assert.equal((await f.phoneEvent('pairing-rejected')).requestId,r.requestId);assert.equal(f.phone.grants.length,0);
 });

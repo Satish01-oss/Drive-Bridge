@@ -32,6 +32,15 @@ Presence is visible only to peers sharing a current grant. Replacing a stale soc
 
 ## Deployment and limits
 
+The phone can relinquish its own approved grant through authenticated
+`POST /v1/grants/<id>/leave`. This requires the grant's controller identity;
+unrelated devices cannot remove it. It removes current broker access and
+notifies both endpoints. Host revocation remains a distinct host-only action.
+The phone deletes its OS-protected local grant before attempting the network
+notification. Offline removal therefore stays removed on that phone, while
+the computer may still list it if it could not be notified. Fresh pairing is
+required to reconnect from a phone that has forgotten the computer.
+
 To bind beyond loopback, an HTTPS public origin is required. Behind a **protected** TLS reverse proxy, set `PUBLIC_ORIGIN=https://your-service.example`, `TRUST_PROXY=true`, `BIND_HOST=0.0.0.0`, `PORT` from the host, and any explicit browser `ALLOWED_ORIGINS`. Do not expose the plain HTTP backend directly. Health checks are public; other requests enforce the origin/HTTPS configuration. Do not log bearer headers, WebSocket ticket subprotocols, challenge proofs, pairing codes or SDP.
 
 This implementation limits request/message sizes, idle authentication/ticket lifetimes, stored records, pairing attempts, incoming request rates, socket buffers and socket counts. It is single-instance and does not provide distributed abuse protection. IPv4/IPv6 addresses come from the socket, not untrusted client IP headers; an ingress-level limit is needed for a hosted proxy.

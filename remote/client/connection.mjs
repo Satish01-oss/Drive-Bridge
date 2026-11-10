@@ -38,7 +38,7 @@ export class ConnectionClient{
    this.#grants.clear();for(const record of await this.#store.get('grants')||[]){try{await this.#knownGrant(record);this.#grants.set(record.grant.id,record);}catch{}}
    current();const challenge=await this.#post('/v1/challenges',{publicKey:this.#identity.publicKey});if(challenge.deviceId!==this.#deviceId||challenge.expiresAt<=Date.now())throw Error('Invalid identity challenge');
    const session=await this.#post('/v1/auth',{challengeId:challenge.challengeId,signature:await this.#sign('auth',challenge)});if(session.deviceId!==this.#deviceId)throw Error('Identity mismatch');this.#token=session.token;
-   for(const record of this.#grants.values())if(record.grant.hostId===this.#deviceId&&record.grant.reconnect)await this.#post('/v1/grants/restore',{record});
+   for(const record of this.#grants.values())if(record.grant.hostId===this.#deviceId&&record.grant.reconnect){try{await this.#post('/v1/grants/restore',{record});}catch(error){if(error.message!=='grant-revoked')throw error;current();this.#revoked.add(record.grant.id);this.#grants.delete(record.grant.id);this.#sessions.delete(record.grant.id);await this.#store.set('grants',this.grants);current();this.#emit({type:'grant-revoked',grantId:record.grant.id});}}
    const {ticket}=await this.#post('/v1/socket-ticket',{});current();
    await new Promise((resolve,reject)=>{
     const ws=new this.#WebSocket(this.#base.replace(/^http/,'ws')+'/v1/ws',['devicebridge.v1','ticket.'+ticket]);this.#socket=ws;
@@ -100,6 +100,12 @@ export class ConnectionClient{
  }
  async rejectRequest(requestId){return this.#post('/v1/requests/'+requestId+'/reject',{});}
  async revoke(grantId){this.#revoked.add(grantId);this.#grants.delete(grantId);this.#sessions.delete(grantId);await this.#store.set('grants',this.grants);this.#emit({type:'grant-revoked',grantId});await this.#post('/v1/grants/'+grantId+'/revoke',{});}
+ async forget(grantId){
+  const record=this.#grants.get(grantId);if(!record||record.grant.controllerId!==this.#deviceId)throw Error('Only this phone can remove its saved computer');
+  this.#revoked.add(grantId);this.#grants.delete(grantId);this.#sessions.delete(grantId);
+  try{await this.#store.set('grants',this.grants);}catch{this.#emit({type:'grant-revoked',grantId});this.stop();throw Error('Sharing stopped, but this phone could not save the removal. Restart the app and remove the PC again.');}this.#emit({type:'grant-revoked',grantId});
+  try{await this.#post('/v1/grants/'+grantId+'/leave',{});return {removed:true,computerNotified:true};}catch{return {removed:true,computerNotified:false};}
+ }
  async sendSignal(grantId,message){
   const generation=this.#generation,record=this.#grants.get(grantId);if(!record||!this.connected)throw Error('No active trusted connection');await this.#knownGrant(record);this.#trusted(record,generation);validateMessage(message);if(message.kind!=='signal')throw Error('Invalid signal');
   const g=record.grant,content={grantId,from:this.#deviceId,to:this.#deviceId===g.hostId?g.controllerId:g.hostId,message};

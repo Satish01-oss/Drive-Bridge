@@ -11,6 +11,8 @@
     "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.5/DeviceBridge-Setup-0.9.0.exe"
   },
   "android": {
+    "versionCode": 905,
+    "versionName": "0.9.0-preview.5",
     "filename": "DeviceBridge-Android-0.9.0-preview.apk",
     "bytes": 3242640,
     "sha256": "040370e0e7357d54dd167d7ef02a58f4ff1aa886083b65ca93424cadcf730837",

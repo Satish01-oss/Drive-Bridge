@@ -353,7 +353,7 @@
       "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
       "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
       "status": "in_progress",
-      "evidence": "Physical Android installation, pairing, Windows approval and live PC screen viewing are confirmed. An initial accidental disconnect was followed by a blank/waiting attempt; clearing that one-session approval and fresh pairing restored the screen. A blank Notepad tab is prepared for physical touch/Unicode typing. Audio, background and separate-network/outage checks remain pending."
+      "evidence": "Physical Android installation, fresh pairing, Windows approval and screen viewing are confirmed on the same Wi-Fi. The user initially selected typing success, but the prepared Notepad tab still showed 0 characters. Typing remains unverified; the user then intentionally disconnected for their own testing. Audio, background, separate-network and outage acceptance remain pending."
     },
     {
       "id": "recovery-tests",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "86 shared/service/protocol/recovery/peer/audio tests pass locally. The prior 84-test bundle passed Windows, macOS and Linux CI. New tests verify that capture failures survive session close and that diagnostic reports exclude candidate addresses and identifiers. Approval, revocation, restart recovery and async Stop races remain covered. Physical Android acceptance remains in the parent tasks."
+      "evidence": "91 shared/service/peer/audio tests pass locally. Phone removal now ends access on both online endpoints, persists local removal while offline, rejects unrelated devices and stops safely if protected storage fails. A returning computer discards a phone-removed approval without becoming unusable. Screen/input/audio/outage acceptance remains in the parent tasks."
     },
     {
       "id": "native-protected-identity",
@@ -470,8 +470,35 @@
       "plan": "Use the public installed apps, generate a fresh short key, approve on Windows and confirm live PC screen viewing on the phone.",
       "acceptance": "The tester sees the Windows screen on a physical Android phone and Windows reports the active connection.",
       "status": "done",
-      "evidence": "The user confirmed The PC screen appears now after fresh pairing. The installed native Windows host also showed Connected. This verifies screen viewing for that session only; touch/typing, network type, performance, audio and outage checks remain separate."
+      "evidence": "The user confirmed The PC screen appears now after fresh pairing. The installed native Windows host also showed Connected. This verifies screen viewing for that session only; touch/typing, network type, performance, audio and outage checks remain separate. The user subsequently confirmed this test used the same Wi-Fi as the PC. It does not verify separate internet networks."
+    },
+    {
+      "id": "phone-remove-pc",
+      "group": "04 · Android and future phone controllers",
+      "title": "Remove a trusted PC from the Android phone",
+      "plan": "Add Remove PC beside each saved computer. Delete its protected local approval and end sharing before notifying the computer; keep removal effective while offline.",
+      "acceptance": "On a physical phone, Remove PC ends sharing, removes the entry across app restart and requires fresh pairing to reconnect.",
+      "status": "in_progress",
+      "evidence": "Implemented the Android/shared controller button and controller-only broker leave action. Five new real-client tests cover online removal, offline persistence, host return, unrelated-device rejection and protected-storage failure. The 91-test shared suite passes. Packaging and physical Android acceptance are pending."
+    },
+    {
+      "id": "android-inapp-updates",
+      "group": "07 · Packaging, verification and release",
+      "title": "Install future Android updates from inside DeviceBridge",
+      "plan": "Add automatic update checking, in-app download and verified Android installer handoff. Publish a versioned release descriptor; refresh the public update feed automatically after GitHub releases.",
+      "acceptance": "After the one-time manual upgrade from the older app, the phone detects a later release, downloads it inside the app and installs it after Android approval while preserving saved devices.",
+      "status": "in_progress",
+      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install."
+    },
+    {
+      "id": "android-update-policy",
+      "group": "07 · Packaging, verification and release",
+      "title": "Verify Android update integrity and publisher policy",
+      "plan": "Test official release paths, redirect restrictions, bounded downloads, newer versions, checksums, package identity and matching publisher before installation.",
+      "acceptance": "Automated native policy tests reject altered, incomplete, foreign, downgraded and differently signed update candidates.",
+      "status": "done",
+      "evidence": "Five Android JUnit update-policy tests pass, alongside four existing native signature-contract tests. They cover official URL constraints, HTTPS redirect hosts, bounded sizes, downgrade rejection, corrupted/truncated receipts and package/publisher matching. This verifies the policy component only; physical Android installer handoff remains in progress."
     }
   ],
-  "stage": "Physical Android installation, pairing and live Windows screen viewing are confirmed on preview 4. Phone touch/Unicode typing is being tested in Notepad. Preview 5 is published with preserved errors, video-progress diagnostics and stronger Stop behavior; 92 Windows and 86 shared checks pass. Audio, microphone, background, separate-network and outage tests remain pending."
+  "stage": "Same-Wi-Fi Android installation, pairing and live screen viewing are confirmed. Phone typing remains unverified; the user intentionally disconnected. Building preview 6 with Remove PC and in-app updates: 91 shared tests, 92 Windows checks, 9 Android native tests and 12 website/release tests pass. One final manual Android install is required to gain the updater; physical updater, audio and outage tests remain pending."
 }

@@ -1,6 +1,6 @@
 DeviceBridge Android preview
 
-AndroidX WebKit 1.16.0 and its AndroidX dependencies:
+AndroidX WebKit 1.16.0, AndroidX Core 1.17.0 and their AndroidX dependencies:
 Copyright The Android Open Source Project. Apache License 2.0.
 https://android.googlesource.com/platform/frameworks/support/
 
