@@ -6,9 +6,9 @@ The user has limited the current release to Windows and Android, with **no paid 
 
 Render's free web service supports WebSockets and TLS, making it suitable for a small trial of this single-instance Node service. It sleeps after 15 minutes without inbound HTTP/WebSocket traffic and can take about a minute to wake. It has an ephemeral filesystem and 750 free instance-hours per workspace per month. Monthly bandwidth and build limits also apply. Avoid adding a payment method or enabling paid upgrades; when free limits are reached, stop or suspend instead of charging. Do not generate artificial traffic just to evade free-tier behavior.
 
-Sources: [free-service limits](https://render.com/docs/free), [WebSocket behavior](https://render.com/docs/websocket). No Render account or service has been provisioned by this change.
+Sources: [free-service limits](https://render.com/docs/free), [WebSocket behavior](https://render.com/docs/websocket). The user authorized setup in their signed-in account. `devicebridge-signaling-preview` is deployed on Free and its public HTTPS health check passes. No payment method or paid upgrade was added.
 
-The in-memory prototype cannot preserve grant/revocation state through a service restart. A hosted release needs durable host-side approvals plus a safe restoration protocol or an appropriate free persistent store. Render's free Postgres expires after 30 days and is not a permanent solution for this app.
+The broker's in-memory state resets at restart. Windows persists host-signed grants in DPAPI-protected storage and restores only reconnect-enabled, unexpired approvals after authenticating. Local revocation is persisted before making its network request, so a failed request cannot restore a locally removed grant. These paths pass real client/service tests; physical Android outage recovery is pending. Render's free Postgres is not used.
 
 ## Relay bandwidth
 

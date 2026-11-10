@@ -92,7 +92,7 @@
       "plan": "Show who is connected, active permissions and a persistent stop action. Release pressed input states and stop audio when access ends.",
       "acceptance": "Stopping a session promptly ends control and media, including when a client misbehaves.",
       "status": "in_progress",
-      "evidence": "Windows remote mode shows approved devices, permissions, connection status, remove-access and tray stop/quit actions, plus an emergency shortcut. The local browser test was explicitly disconnected and its controller tab closed. Physical audio/mic cleanup, background visibility and interruption tests remain pending."
+      "evidence": "Windows remote mode shows approved devices, permissions, connection status, remove-access and tray stop/quit actions, plus an emergency shortcut. The local browser test was explicitly disconnected and its controller tab closed. Physical audio/mic cleanup, background visibility and interruption tests remain pending. Source hardening now makes native Stop pause capture and disconnect the service, requiring an explicit Reconnect before becoming available again. It is built locally but not yet included in preview 4; runtime verification and updated packaging remain pending."
     },
     {
       "id": "win-screen",
@@ -209,7 +209,7 @@
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device views and controls a Windows PC; MacBook acceptance is deferred.",
       "status": "in_progress",
-      "evidence": "Android companion builds locally and on GitHub CI (run 42832703946), using SDK 37.0 and Java 17, minimum Android 8. Native signed JSON passes four JVM checks including a Node-generated Ed25519 vector. The signed APK is verified locally. Physical installation, Keystore persistence and screen/input/audio/microphone acceptance remain pending. Six additional shared peer tests now check Unicode payloads, view-only input denial, replay/wrong-display rejection and cleanup."
+      "evidence": "The user installed the signed preview 4 APK on a physical Android phone and reached its connection-key screen. Windows approval succeeded, but the phone remained waiting for its computer screen. Physical screen/input/audio acceptance is not complete; that failure is under investigation."
     },
     {
       "id": "ios",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Published source-pinned prerelease v0.9.0-preview.4 with the 84-test client fixes in both apps. Windows passed 92 checks plus clean-runner installer install/reinstall/shortcuts/uninstall; Android release APK signature is verified and 4 native contract tests pass. Public assets have verified SHA-256 digests. Physical phone installation/update acceptance remains pending. Stable Windows stays 0.8.0."
+      "evidence": "Published source-pinned prerelease v0.9.0-preview.4 with the 84-test client fixes in both apps. Windows passed 92 checks plus clean-runner installer install/reinstall/shortcuts/uninstall; Android release APK signature is verified and 4 native contract tests pass. Public assets have verified SHA-256 digests. Physical phone installation/update acceptance remains pending. Stable Windows stays 0.8.0. The preview 4 Windows installer also completed on this PC and opened the installed remote host. The physical Android app installed and opened; remote screen acceptance remains pending."
     },
     {
       "id": "regression",
@@ -352,8 +352,8 @@
       "title": "Test every main controller-to-computer pairing",
       "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
       "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Physical Android test started: signed APK installation and Windows pairing/approval succeeded. An accidental disconnect interrupted the first session; a later attempt remained on Waiting for computer screen. A fresh pairing test and connection-stage diagnostics are in progress. Do not treat the screen/control/audio tests as passed."
     },
     {
       "id": "recovery-tests",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "84 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The 84-test suite passes locally; platform CI is checked separately. New tests reproduce and fix delayed approvals/signals after Stop, revocation during verification and approval arriving before its pairing HTTP response. Actual broker restart recovery, failed-network revocation and permission/replay gating remain covered. Physical internet/Android acceptance remains in the parent tasks."
+      "evidence": "86 shared/service/protocol/recovery/peer/audio tests pass locally. The prior 84-test bundle passed Windows, macOS and Linux CI. New tests verify that capture failures survive session close and that diagnostic reports exclude candidate addresses and identifiers. Approval, revocation, restart recovery and async Stop races remain covered. Physical Android acceptance remains in the parent tasks."
     },
     {
       "id": "native-protected-identity",
@@ -453,7 +453,16 @@
       "acceptance": "Public release assets match the tested source and advertised hashes; the preview page clearly states unfinished acceptance tests.",
       "status": "done",
       "evidence": "Published v0.9.0-preview.4 from b78df59e89a046de37d00526e4a153598f699b63. GitHub Windows workflow 42850501916 passed build, 92 checks and clean installer tests; the signed APK contains the same latest client bundle. Both release assets and checksums are publicly available. The website advertises this as a preview; physical Android acceptance is still pending."
+    },
+    {
+      "id": "android-install-acceptance",
+      "group": "07 · Packaging, verification and release",
+      "title": "Install and open the signed preview on a physical Android phone",
+      "plan": "Have the tester install the public signed APK and open its pairing screen; record screen/control tests separately.",
+      "acceptance": "The user confirms the Android APK installs and its connection-key screen opens.",
+      "status": "done",
+      "evidence": "The user confirmed the connection-key screen is open after installing the public preview 4 Android APK. Windows also displayed an approved phone. This verifies installation/launch only; the remote screen remained pending and is being fixed."
     }
   ],
-  "stage": "Windows + Android preview 4 is published. Local screen, multilingual queued typing, Stop cancellation, minimize/X and reopen tests passed. Automated coverage: 92 Windows, 84 shared/service and 4 Android contract checks. Next: physical Android installation, separate-network connection, sound/microphone and trusted outage recovery."
+  "stage": "Physical Android preview testing is underway. Installation and Windows approval succeeded; the computer screen remains blank/waiting and is not accepted. Native Stop hardening, preserved error messages and connection/video progress reports are being prepared for a diagnostic update. 92 Windows checks and 86 shared tests pass locally; sound, microphone and outage acceptance remain pending."
 }

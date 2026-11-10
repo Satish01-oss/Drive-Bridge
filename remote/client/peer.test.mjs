@@ -36,3 +36,13 @@ test('closing while capture is pending disposes resources returned late',async t
 test('backpressure closes the peer and releases input without recursive close',async t=>{
  const f=setup(t),{a}=await f.connect();a.bufferedAmount=129*1024;assert.equal(f.phone.sendInput({type:'text',text:'x'}),false);await flush();assert.equal(f.phone.ready,false);f.host.close();assert.equal(f.counts.release,1);
 });
+
+test('screen acquisition errors survive close so the UI can show the actual failure',async t=>{
+ const f=setup(t,{acquire:async()=>{throw Error('The computer display is unavailable');}});await f.phone.begin({generation:1});await flush();
+ const closed=f.events.find(e=>e.type==='closed');assert.equal(closed.message,'The computer display is unavailable');assert.equal(closed.reason,'transport-failed');assert.equal(f.host.ready,false);
+});
+
+test('connection diagnostics report video progress without candidate addresses or identifiers',async t=>{
+ const f=setup(t);await f.connect();f.pcs[1].getStats=async()=>new Map([['private',{type:'local-candidate',address:'192.168.1.5',usernameFragment:'secret'}],['video',{type:'inbound-rtp',kind:'video',framesReceived:5,framesDecoded:4,id:'private-id'}]]);
+ const report=await f.phone.diagnostics();assert.equal(report.videoFramesReceived,5);assert.equal(report.videoFramesDecoded,4);assert.equal(report.control,'open');assert.ok(!JSON.stringify(report).match(/192\.168|secret|private-id/));
+});

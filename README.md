@@ -1,4 +1,4 @@
-# DeviceBridge — Windows app and download website
+# DeviceBridge — Windows app, Android companion and download website
 
 A static, responsive download website for DeviceBridge, the Windows app for sharing a keyboard, mouse, speakers/headphones and microphone between two PCs on the same trusted network. Wi-Fi and Ethernet can be mixed.
 
@@ -6,11 +6,18 @@ Windows 10/11 x64. The website follows the latest published stable GitHub Releas
 
 Public website: https://satish01-oss.github.io/Drive-Bridge/
 
+Windows + Android remote preview: https://satish01-oss.github.io/Drive-Bridge/remote-preview.html
+
+Progress and acceptance evidence: https://satish01-oss.github.io/Drive-Bridge/improvements.html
+
+Stable Windows is **0.8.0**. The separate **0.9.0-preview.4** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
+
 Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 
 ## Repository layout
 
-- `remote/`: New cross-platform remote-access foundation and protocol documentation; not yet connected to the released Windows app. See [development status](remote/README.md).
+- `remote/`: Signed pairing/signaling service, shared WebRTC client and remote protocol documentation. See [development status](remote/README.md).
+- `android/`: Native Android companion, protected identity storage and APK build instructions.
 - `app/DeviceBridge/`: Windows app source, build/signing scripts, regression checks, original driver bundle and third-party notices. See [app build instructions](app/DeviceBridge/README.md).
 - `dist/`: Complete public download website, photographs, release manifests and app download data.
 - `scripts/verify-site.mjs`: Website link and EXE integrity validation.
@@ -20,6 +27,8 @@ Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 Website changes publish through GitHub Pages. App changes build and test on a Windows runner and produce a versioned installer in the workflow artifact. **Publishing a stable GitHub Release with that installer EXE automatically updates the website.** See [release instructions](RELEASING.md). Updating app source alone does not release a new download.
 
 ## Hosting
+
+New Windows/Android improvements are tracked in `docs/improvements-status.json`. Run `node scripts/build-improvements.mjs` after updating evidence. Parent features stay in progress until physical acceptance passes.
 
 The [project checklist](docs/DeviceBridge-Checklist.html) tracks completed implementation and the remaining two-PC acceptance checks. Edit `docs/project-status.json` with verified evidence and run `node scripts/build-checklist.mjs` to regenerate the standalone HTML. Manual checkbox changes stay in the browser; the HTML can also save an updated offline copy. Checkboxes do not start device sharing; pairing happens in the installed Windows app.
 

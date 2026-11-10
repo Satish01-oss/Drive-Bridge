@@ -19,6 +19,7 @@ internal sealed class RemoteHostForm : Form
     string? captureId;
     Rectangle captureBounds;
     bool allowInput;
+    bool sharingPaused;
     long grantExpiresAt;
     CancellationTokenSource? captureStop;
     sealed class FrameState { public int Pending; public int AudioPending; }
@@ -47,7 +48,7 @@ internal sealed class RemoteHostForm : Form
     public void RestoreWindow() { WindowState = FormWindowState.Normal; Show(); Activate(); }
     protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); RegisterHotKey(Handle, 41, 1 | 2 | 4, (uint)Keys.Escape); }
     protected override void WndProc(ref Message message) { if ((uint)message.Msg == AppActivation.RestoreMessage) { RestoreWindow(); return; } if (message.Msg == 0x312 && message.WParam == 41) EmergencyStop(); base.WndProc(ref message); }
-    void EmergencyStop() { StopCapture(); Post(new { type = "native-stop" }); }
+    void EmergencyStop() { sharingPaused = true; StopCapture(); Post(new { type = "native-stop" }); }
     async Task InitializeAsync()
     {
         try
@@ -98,6 +99,8 @@ internal sealed class RemoteHostForm : Form
             object? result = null;
             switch (type)
             {
+                case "host.pause": sharingPaused = true; StopCapture(); break;
+                case "host.resume": sharingPaused = false; break;
                 case "pairing.notify": RestoreWindow(); tray.ShowBalloonTip(8000, "A phone wants to connect", "Review the request in DeviceBridge. Sharing starts only after you allow it.", ToolTipIcon.Info); break;
                 case "identity.get": result = new { publicKey = store.PublicKey }; break;
                 case "identity.sign": result = store.Sign(request.GetProperty("purpose").GetString()!, request.GetProperty("value")); break;
@@ -136,6 +139,7 @@ internal sealed class RemoteHostForm : Form
     }
     object StartCapture(string grantId)
     {
+        if (sharingPaused) throw new IOException("Remote sharing is paused. Click Reconnect on this computer to resume.");
         if (designPreview) throw new IOException("Screen sharing is disabled in design preview.");
         var grant = store.OwnGrant(grantId); var permissions = grant.GetProperty("permissions").EnumerateArray().Select(v => v.GetString()).ToArray();
         if (!permissions.Contains("view")) throw new IOException("Screen sharing is not permitted.");

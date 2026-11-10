@@ -2,6 +2,8 @@ import {validateMessage,validateInput,encodeMessage,decodeMessage,SessionGate} f
 import {toBase64Url} from '../shared/signatures.mjs';
 const randomId=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 export class RemotePeer{
+ #failure=null;
+ #receivedSignals=0;
  #client;#record;#role;#pc;#channel;#resources;#acquire;#event;#unsubscribe;#sessionId;#generation;#outgoing=Promise.resolve();#incoming=Promise.resolve();#signalSeq=0;#dataSeq=0;#gate;#closed=false;#ready=false;#permissions=[];#candidates=[];#remoteCount=0;#heartbeat;#deadline;#lastData=Date.now();#microphone;#localMicrophone;
  constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection}){
   if(!['host','controller'].includes(role))throw Error('Invalid role');const g=record.grant;if(client.deviceId!==(role==='host'?g.hostId:g.controllerId))throw Error('Wrong device role');
@@ -18,15 +20,24 @@ export class RemotePeer{
    if(e.type==='grant-revoked'&&e.grantId===g.id)this.close('revoked');
    if(e.type==='signal'&&e.signed.grantId===g.id){
     if(++this.#remoteCount>128){this.close('signal-overflow');return;}
-    this.#incoming=this.#incoming.then(()=>this.#receiveSignal(e.signed.message)).catch(error=>{event({type:'error',message:error.message});this.close('transport-failed');}).finally(()=>this.#remoteCount--);
+    this.#incoming=this.#incoming.then(()=>this.#receiveSignal(e.signed.message)).catch(error=>this.#fail(error.message)).finally(()=>this.#remoteCount--);
    }
   });
-  this.#deadline=setTimeout(()=>{if(!this.#ready){event({type:'error',message:'The direct connection could not finish. This network may require a relay.'});this.close('transport-failed');}},45000);
+  this.#deadline=setTimeout(()=>{if(!this.#ready)this.#fail('The direct connection could not finish. This network may require a relay.');},45000);
  }
  get ready(){return this.#ready&&!this.#closed;}
  get display(){return this.displayInfo;}
  get permissions(){return [...this.#permissions];}
- acceptInitialOffer(message){this.#incoming=this.#incoming.then(()=>this.#receiveSignal(message)).catch(error=>{this.#event({type:'error',message:error.message});this.close('transport-failed');});}
+ async diagnostics(){
+  const report={ready:this.ready,connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0};
+  try{const stats=await this.#pc.getStats();for(const row of stats.values()){
+   if(row.type==='inbound-rtp'&&(row.kind==='video'||row.mediaType==='video')){report.videoFramesReceived+=row.framesReceived||0;report.videoFramesDecoded+=row.framesDecoded||0;}
+   if(row.type==='outbound-rtp'&&(row.kind==='video'||row.mediaType==='video'))report.videoFramesEncoded+=row.framesEncoded||0;
+  }}catch{}
+  return report;
+ }
+ #fail(message){if(this.#closed)return;this.#failure=message;this.#event({type:'error',message});this.close('transport-failed');}
+ acceptInitialOffer(message){this.#incoming=this.#incoming.then(()=>this.#receiveSignal(message)).catch(error=>this.#fail(error.message));}
  async begin({generation=Date.now()}={}){
   if(this.#role!=='controller'||this.#sessionId)throw Error('Only the controller can start a session');
   this.#sessionId=randomId();this.#generation=generation;
@@ -40,13 +51,13 @@ export class RemotePeer{
   if(type==='candidate'&&!this.#signalStarted){this.pendingLocal??=[];if(this.pendingLocal.length>=64){this.close('signal-overflow');return Promise.resolve();}this.pendingLocal.push(data);return Promise.resolve();}
   this.#signalStarted=true;const message={protocol:'devicebridge.remote',version:1,kind:'signal',sessionId:this.#sessionId,generation:this.#generation,seq:this.#signalSeq++,payload:{type,data}};
   const send=this.#outgoing=this.#outgoing.then(()=>{if(!this.#closed)return this.#client.sendSignal(this.#record.grant.id,message);});
-  send.catch(error=>{this.#event({type:'error',message:error.message});this.close('transport-failed');});
+  send.catch(error=>this.#fail(error.message));
   if(type!=='candidate'){const pending=this.pendingLocal||[];this.pendingLocal=[];for(const candidate of pending)this.#signal('candidate',candidate);}
   return send;
  }
  #signalStarted=false;
  async #receiveSignal(message){
-  if(this.#closed)return;validateMessage(message);const {type,data}=message.payload;
+  if(this.#closed)return;validateMessage(message);this.#receivedSignals++;const {type,data}=message.payload;
   if(type==='offer'){
    if(this.#role!=='host'||this.#sessionId)throw Error('Unexpected offer');this.#sessionId=message.sessionId;this.#generation=message.generation;
    this.#resources=await this.#acquire(this.#record.grant);if(this.#closed){this.#resources?.dispose?.();return;}
@@ -86,7 +97,7 @@ export class RemotePeer{
     if(m.kind==='input'){
      if(this.#role!=='host')throw Error('Controller cannot receive input');if(m.payload.type==='pointer'&&m.payload.point.displayId!==this.displayInfo.id)throw Error('Wrong display');this.#resources.applyInput?.(m.payload);
     }
-   }catch(error){this.#event({type:'error',message:error.message});this.close('transport-failed');}
+   }catch(error){this.#fail(error.message);}
   };
  }
  sendInput(input){validateInput(input);if(!this.ready||this.#role!=='controller'||!this.#permissions.includes('input'))return false;return this.#send('input',input);}
@@ -99,6 +110,6 @@ export class RemotePeer{
  close(reason='user'){
   if(this.#closed)return;if(this.#channel?.bufferedAmount<=128*1024)this.#send('session.stop',{reason:['user','revoked','expired','shutdown','permission-changed','transport-failed'].includes(reason)?reason:'transport-failed'});this.#closed=true;this.#ready=false;
   clearTimeout(this.#deadline);clearInterval(this.#heartbeat);this.#unsubscribe?.();this.#gate?.close();this.#channel?.close();this.#pc.close();this.#localMicrophone?.getTracks().forEach(t=>t.stop());
-  try{this.#resources?.releaseInput?.();}finally{this.#resources?.dispose?.();this.#event({type:'closed',reason});}
+    try{this.#resources?.releaseInput?.();}finally{this.#resources?.dispose?.();this.#event({type:'closed',reason,message:this.#failure});}
  }
 }

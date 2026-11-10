@@ -52,7 +52,7 @@ Use a reliable ordered WebRTC data channel for control/input, video tracks for t
 
 Initial short-code/QR pairing requires host approval, expiration and rate limits. The six-character code is not a durable authentication secret. Exchange strong device identities, bind approval to the peer public key and issue host-authorized grants. OS-protected storage, a signed challenge with a fresh nonce, replay resistance, relay credentials, and revocation persistence must be implemented before enabling internet access.
 
-The recovery policy receives only **verified** host grants, never a grant copied from incoming JSON or an unauthenticated presence message. Grant fields: host ID, opaque grant ID, permission revision, UTC expiry, allowed permissions, and explicit reconnect consent. The adapter must recheck revocation/expiry on the host for every resumed session; a client-side timer is not an authorization boundary. Device authentication and grant verification are not implemented in this milestone.
+The recovery policy receives only **verified** host grants, never a grant copied from incoming JSON or an unauthenticated presence message. Grant fields: host ID, opaque grant ID, permission revision, UTC expiry, allowed permissions, and explicit reconnect consent. The adapter must recheck revocation/expiry on the host for every resumed session; a client-side timer is not an authorization boundary. Device authentication and grant verification are implemented in the broker and shared client. Native signing adapters use Windows DPAPI and Android Keystore storage with matching canonical-signature fixtures.
 
 ## Reconnection state machine
 
