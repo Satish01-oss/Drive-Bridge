@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "tag": "v0.9.0-preview.5",
-  "source": "21804c1521cbbbfaeaa1edb5c303295f1912eca7",
+  "tag": "v0.9.0-preview.6",
+  "source": "47bf742b6a07e4ef81d4e18b9ed66438628a0ef8",
   "android": {
-    "versionCode": 905,
-    "versionName": "0.9.0-preview.5",
+    "versionCode": 906,
+    "versionName": "0.9.0-preview.6",
     "filename": "DeviceBridge-Android-0.9.0-preview.apk",
-    "bytes": 3242640,
-    "sha256": "040370e0e7357d54dd167d7ef02a58f4ff1aa886083b65ca93424cadcf730837",
-    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.5/DeviceBridge-Android-0.9.0-preview.apk"
+    "bytes": 4077448,
+    "sha256": "6443c627f60239c73f266ea348078dfa36515ddef59bfec157b7ab0480154dbc",
+    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.6/DeviceBridge-Android-0.9.0-preview.apk"
   }
 }

@@ -10,7 +10,7 @@ Windows + Android remote preview: https://satish01-oss.github.io/Drive-Bridge/re
 
 Progress and acceptance evidence: https://satish01-oss.github.io/Drive-Bridge/improvements.html
 
-Stable Windows is **0.8.0**. The separate **0.9.0-preview.5** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
+Stable Windows is **0.8.0**. The separate **0.9.0-preview.6** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
 
 Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 

@@ -227,7 +227,7 @@
       "plan": "Support phone keyboards, composition/IME, Unicode, editing keys and an extra toolbar for computer-only modifier keys.",
       "acceptance": "Android text, Backspace, Enter, selection and desktop shortcuts work on Windows, including multilingual text.",
       "status": "in_progress",
-      "evidence": "Shared typing and editing keys are implemented. Native Windows now paces Unicode delivery asynchronously; actual local browser-to-Windows testing passed multilingual text and two-message ordering. Cancellation and malformed text rejection pass automated checks. Android IME/composition and real phone keyboards remain unverified."
+      "evidence": "Shared typing and editing keys are implemented. Native Windows now paces Unicode delivery asynchronously; actual local browser-to-Windows testing passed multilingual text and two-message ordering. Cancellation and malformed text rejection pass automated checks. Android IME/composition and real phone keyboards remain unverified. The user confirmed using the phone typing control for these chat prompts. The exact Unicode fixture and shortcut/clipboard tests remain pending."
     },
     {
       "id": "mobile-audio",
@@ -353,7 +353,7 @@
       "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
       "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
       "status": "in_progress",
-      "evidence": "Physical Android installation, fresh pairing, Windows approval and screen viewing are confirmed on the same Wi-Fi. The user initially selected typing success, but the prepared Notepad tab still showed 0 characters. Typing remains unverified; the user then intentionally disconnected for their own testing. Audio, background, separate-network and outage acceptance remain pending."
+      "evidence": "Physical Android installation, fresh pairing, Windows approval and screen viewing are confirmed on the same Wi-Fi. The user initially selected typing success, but the prepared Notepad tab still showed 0 characters. Typing remains unverified; the user then intentionally disconnected for their own testing. Audio, background, separate-network and outage acceptance remain pending. The user then explicitly confirmed they are using the phone typing control to send these chat prompts. Record basic phone typing as user-confirmed; the exact multilingual Notepad fixture remains unverified."
     },
     {
       "id": "recovery-tests",
@@ -452,7 +452,7 @@
       "plan": "Publish a source-pinned prerelease with the Windows installer, signed Android APK and SHA-256 sums. Keep stable Windows separate and provide a phone-friendly setup page.",
       "acceptance": "Public release assets match the tested source and advertised hashes; the preview page clearly states unfinished acceptance tests.",
       "status": "done",
-      "evidence": "Published source-pinned preview 5 from 21804c1521cbbbfaeaa1edb5c303295f1912eca7 with the Windows installer, signed Android update (version code 905), SHA-256 sums and public download verification. Windows workflow 42862078730 passed build, 92 checks and isolated installation tests. Shared diagnostics/error/Stop coverage passes 86 tests locally. Physical screen viewing is confirmed on preview 4; preview 5 physical acceptance remains separate."
+      "evidence": "Published preview 6 from 47bf742b6a07e4ef81d4e18b9ed66438628a0ef8 with verified Windows and signed Android downloads, SHA-256 sums and Android-update.json for in-app updates. Windows workflow 42866990613 passed 92 checks and isolated installer tests. Android native checks: 9. Shared checks: 91. New phone controls require physical acceptance."
     },
     {
       "id": "android-install-acceptance",
@@ -479,7 +479,7 @@
       "plan": "Add Remove PC beside each saved computer. Delete its protected local approval and end sharing before notifying the computer; keep removal effective while offline.",
       "acceptance": "On a physical phone, Remove PC ends sharing, removes the entry across app restart and requires fresh pairing to reconnect.",
       "status": "in_progress",
-      "evidence": "Implemented the Android/shared controller button and controller-only broker leave action. Five new real-client tests cover online removal, offline persistence, host return, unrelated-device rejection and protected-storage failure. The 91-test shared suite passes. Packaging and physical Android acceptance are pending."
+      "evidence": "Implemented the Android/shared controller button and controller-only broker leave action. Five new real-client tests cover online removal, offline persistence, host return, unrelated-device rejection and protected-storage failure. The 91-test shared suite passes. Packaging and physical Android acceptance are pending. Packaged and published in preview 6; physical phone verification remains pending."
     },
     {
       "id": "android-inapp-updates",
@@ -488,7 +488,7 @@
       "plan": "Add automatic update checking, in-app download and verified Android installer handoff. Publish a versioned release descriptor; refresh the public update feed automatically after GitHub releases.",
       "acceptance": "After the one-time manual upgrade from the older app, the phone detects a later release, downloads it inside the app and installs it after Android approval while preserving saved devices.",
       "status": "in_progress",
-      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install."
+      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install. Signed preview 6 (version code 906) is published with its release descriptor. GitHub release events automatically refresh the Android update feed; the physical update handoff remains pending."
     },
     {
       "id": "android-update-policy",
@@ -498,7 +498,25 @@
       "acceptance": "Automated native policy tests reject altered, incomplete, foreign, downgraded and differently signed update candidates.",
       "status": "done",
       "evidence": "Five Android JUnit update-policy tests pass, alongside four existing native signature-contract tests. They cover official URL constraints, HTTPS redirect hosts, bounded sizes, downgrade rejection, corrupted/truncated receipts and package/publisher matching. This verifies the policy component only; physical Android installer handoff remains in progress."
+    },
+    {
+      "id": "android-typing-acceptance",
+      "group": "07 · Packaging, verification and release",
+      "title": "Confirm basic physical Android-to-Windows typing",
+      "plan": "Have the tester enter text through the connected phone and confirm it reaches a Windows application.",
+      "acceptance": "The user explicitly confirms text entered through the phone reaches their PC application.",
+      "status": "done",
+      "evidence": "The user explicitly stated they are using the phone text button to submit these chat prompts and that it works. This verifies user-reported basic typing; the separate Notepad Unicode fixture, shortcuts and clipboard are not marked passed."
+    },
+    {
+      "id": "android-fullscreen",
+      "group": "04 · Android and future phone controllers",
+      "title": "Add fullscreen viewing with a Tools menu and fixed typing bar",
+      "plan": "Use Android immersive fullscreen, keep the computer screen fitted to the available area, place touch/right-click/scroll/sound/microphone/shortcut controls in a hamburger Tools menu, and keep text plus Send at the bottom.",
+      "acceptance": "On a physical Android phone, fullscreen opens/exits, Tools exposes every existing control, and text/Send remain usable in both orientations with the keyboard open.",
+      "status": "in_progress",
+      "evidence": "Requested and planned. Implementing after the preview 6 updater bootstrap so this feature can be delivered from inside the phone app. No fullscreen acceptance is claimed yet."
     }
   ],
-  "stage": "Same-Wi-Fi Android installation, pairing and live screen viewing are confirmed. Phone typing remains unverified; the user intentionally disconnected. Building preview 6 with Remove PC and in-app updates: 91 shared tests, 92 Windows checks, 9 Android native tests and 12 website/release tests pass. One final manual Android install is required to gain the updater; physical updater, audio and outage tests remain pending."
+  "stage": "Preview 6 is published with Remove PC and verified in-app Android updates. Basic phone typing and same-Wi-Fi screen viewing are user-confirmed. One final manual update enables the updater; fullscreen with a Tools menu and bottom typing bar is being built next. Physical removal/update, audio, separate-network and outage acceptance remain pending."
 }
