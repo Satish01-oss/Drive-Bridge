@@ -3,10 +3,10 @@ import { createHash } from 'node:crypto';
 import { resolve, dirname, relative } from 'node:path';
 import { validateDescriptor } from './sync-android-update.mjs';
 
-const root = resolve('dist');
+const root = resolve(process.argv[2]||'frontend/site');
 async function localFile(path) {
   const resolved = resolve(path);
-  if (relative(root, resolved).startsWith('..')) throw new Error(`File outside dist: ${path}`);
+  if (relative(root, resolved).startsWith('..')) throw new Error(`File outside website output: ${path}`);
   if (!(await stat(resolved)).isFile()) throw new Error(`Not a file: ${path}`);
   return readFile(resolved);
 }

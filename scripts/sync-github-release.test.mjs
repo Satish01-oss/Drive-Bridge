@@ -21,7 +21,7 @@ function fixture() {
 async function workspace(t) {
   const root = await mkdtemp(join(tmpdir(),'devicebridge-release-test-'));
   t.after(async () => { await rm(root,{recursive:true,force:true}); });
-  for (const name of ['index.html','test.html','release.json','test-release.json']) await writeFile(join(root,name),await readFile(resolve('dist',name)));
+  for (const name of ['index.html','test.html','release.json','test-release.json']) await writeFile(join(root,name),await readFile(resolve('frontend/site',name)));
   await mkdir(join(root,'downloads'));
   await writeFile(join(root,'downloads/old.part'),'old download');
   return root;

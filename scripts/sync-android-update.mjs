@@ -17,7 +17,7 @@ async function limited(response,maximum){
  for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>maximum){await reader.cancel();throw Error('Android update response is too large');}parts.push(Buffer.from(value));}
  return Buffer.concat(parts,size);
 }
-export async function syncAndroidUpdate({directory='dist',fetchImpl=fetch,token=process.env.GITHUB_TOKEN}={}){
+export async function syncAndroidUpdate({directory='frontend/site',fetchImpl=fetch,token=process.env.GITHUB_TOKEN}={}){
  const file=resolve(directory,'android-update.json');let best=validateDescriptor(JSON.parse(await readFile(file,'utf8')));
  const headers={Accept:'application/vnd.github+json','User-Agent':'DeviceBridge-Android-update-sync',...(token?{Authorization:'Bearer '+token}:{})};
  const response=await fetchImpl(`https://api.github.com/repos/${repository}/releases?per_page=30`,{headers,signal:AbortSignal.timeout(30000)});

@@ -19,7 +19,8 @@ Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 - `remote/`: Signed pairing/signaling service, shared WebRTC client and remote protocol documentation. See [development status](remote/README.md).
 - `android/`: Native Android companion, protected identity storage and APK build instructions.
 - `app/DeviceBridge/`: Windows app source, build/signing scripts, regression checks, original driver bundle and third-party notices. See [app build instructions](app/DeviceBridge/README.md).
-- `dist/`: Complete public download website, photographs, release manifests and app download data.
+- `frontend/site/`: Website source, photographs, release manifests and app download data.
+- `frontend/build.mjs`: Builds and verifies the static website for Vercel or GitHub Pages. Output is `frontend/dist/`.
 - `scripts/verify-site.mjs`: Website link and EXE integrity validation.
 - `scripts/sync-github-release.mjs`: Fetches, verifies and packages the latest GitHub Release during deployment.
 - `.github/workflows/`: Automatic website publication and Windows app build/testing.
@@ -32,9 +33,9 @@ New Windows/Android improvements are tracked in `docs/improvements-status.json`.
 
 The [project checklist](docs/DeviceBridge-Checklist.html) tracks completed implementation and the remaining two-PC acceptance checks. Edit `docs/project-status.json` with verified evidence and run `node scripts/build-checklist.mjs` to regenerate the standalone HTML. Manual checkbox changes stay in the browser; the HTML can also save an updated offline copy. Checkboxes do not start device sharing; pairing happens in the installed Windows app.
 
-The complete website is in `dist/`. Publish that directory on any HTTPS static host; no installation or build step is required. All site links are relative, including the two-PC test guide, so it also works under a repository path.
+The website is a separate project in `frontend/`. Import this repository into Vercel with the default repository root; `vercel.json` builds only the static frontend. No backend, Windows or Android build runs there. See [frontend deployment instructions](frontend/README.md). The connection backend stays on Render.
 
-The included GitHub Actions workflow validates the downloads and publishes `dist/` to GitHub Pages after pushes to `main`. For first-time Pages setup, select **Settings → Pages → Source → GitHub Actions**, then run **Verify and publish website** from the Actions tab if needed. The Pages URL appears in the deployment output once deployment succeeds.
+The included GitHub Actions workflow runs the same frontend build and publishes `frontend/dist/` to GitHub Pages. Those existing release-feed URLs remain available for installed Android apps and automatic latest-download metadata on Vercel.
 
 ## Download files
 
@@ -48,14 +49,14 @@ Run the same checks locally with Node.js 22 or newer:
 
 ```sh
 node scripts/verify-site.mjs
-node --check dist/app.js
+node --check frontend/site/app.js
 node --test scripts/sync-github-release.test.mjs
 ```
 
-To preview, serve `dist/` through a local HTTP server. HTTPS (or localhost) is required for the browser's integrity check; opening `index.html` directly as a file is not supported.
+Build with `node frontend/build.mjs`, then serve `frontend/dist/` through a local HTTP server. HTTPS (or localhost) is required for browser integrity checks.
 
 ## App and third-party notices
 
 This repository contains the website, packaged download and Windows app source. The current app supports per-user installation, desktop/Start menu shortcuts and uninstall through Windows Settings. Version 0.7.0 is an unsigned preview; Windows may display a publisher warning. The included microphone driver has a one-time approval and restart step.
 
-VB-CABLE is included unchanged and remains subject to VB-Audio's licensing. Photo attribution and license links are preserved in `dist/credits.html` and `dist/PHOTO-LICENSES.txt`. The photographs and bundled driver are not covered by any blanket open-source license for this repository.
+VB-CABLE is included unchanged and remains subject to VB-Audio's licensing. Photo attribution and license links are preserved in `frontend/site/credits.html` and `frontend/site/PHOTO-LICENSES.txt`. The photographs and bundled driver are not covered by any blanket open-source license for this repository.

@@ -57,7 +57,7 @@ export function renderRelease(html, manifest) {
   return field(html, 'data-release-caption', 'The download is synced from the latest published GitHub release. Use the same version on both PCs. See its release notes for changes and testing details.');
 }
 
-export async function syncRelease({root = resolve('dist'), fetcher = fetch, token = process.env.GITHUB_TOKEN} = {}) {
+export async function syncRelease({root = resolve('frontend/site'), fetcher = fetch, token = process.env.GITHUB_TOKEN} = {}) {
   const response = await fetcher(`https://api.github.com/repos/${repository}/releases/latest`, {
     headers: {Accept:'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28', ...(token ? {Authorization:`Bearer ${token}`} : {})},
     signal: AbortSignal.timeout(30_000)

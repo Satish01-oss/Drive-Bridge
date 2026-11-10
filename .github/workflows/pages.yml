@@ -24,23 +24,13 @@ jobs:
           node-version: '22'
       - name: Test release synchronization
         run: node --test scripts/sync-github-release.test.mjs scripts/sync-android-update.test.mjs
-      - name: Build improvements tracker
-        run: node scripts/build-improvements.mjs
-      - name: Prepare the latest published Windows release
-        run: node scripts/sync-github-release.mjs
+      - name: Build the verified static frontend
+        run: node frontend/build.mjs
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Check download integrity and website links
-        run: node scripts/verify-site.mjs
-      - name: Refresh the Android in-app update feed
-        run: node scripts/sync-android-update.mjs
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
-      - name: Check JavaScript syntax
-        run: node --check dist/app.js
       - uses: actions/upload-pages-artifact@v4
         with:
-          path: dist
+          path: frontend/dist
 
   deploy:
     needs: build

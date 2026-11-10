@@ -7,13 +7,30 @@
   const save = document.getElementById('save-app');
   const retry = document.getElementById('retry-download');
   let busy = false, ready = false, manifest, lastTrigger;
-  const releaseUrl = document.body.dataset.release || 'release.json';
+  const releaseUrl = new URL(document.body.dataset.release || 'release.json',location.href);
+  const trustedFeed = new URL(releaseUrl.pathname.endsWith('test-release.json')?'test-release.json':'release.json','https://satish01-oss.github.io/Drive-Bridge/');
+  let manifestBase=releaseUrl;
   function showRelease(m) {
     document.querySelectorAll('[data-release-version]').forEach(el => el.textContent = m.version);
     document.querySelectorAll('[data-release-filename]').forEach(el => el.textContent = m.filename);
     document.querySelectorAll('[data-release-size]').forEach(el => el.textContent = Math.ceil(m.bytes / 1024 / 1024) + ' MB · One file');
+    if(m.publishedAt)document.querySelectorAll('[data-release-date]').forEach(el=>el.textContent=new Intl.DateTimeFormat('en-GB',{day:'numeric',month:'short',year:'numeric',timeZone:'UTC'}).format(new Date(m.publishedAt)));
+    if(m.releaseUrl)document.querySelectorAll('[data-release-changes] a').forEach(el=>el.href=m.releaseUrl);
+    document.querySelectorAll('[data-release-changes] li:first-child').forEach(el=>el.textContent='Windows x64 '+(m.kind==='installer'?'installer':'app')+' · v'+m.version);
   }
-  const manifestReady = fetch(releaseUrl, {cache:'no-cache'}).then(r => { if (!r.ok) throw new Error('Release information unavailable'); return r.json(); }).then(m => { manifest = m; showRelease(m); return m; });
+  let manifestLoading;
+  function loadManifest(){if(manifestLoading)return manifestLoading;manifestLoading=readManifest().finally(()=>{manifestLoading=null;});return manifestLoading;}
+  async function readManifest(){
+    const choices=location.protocol==='https:'&&location.origin!==trustedFeed.origin?[trustedFeed,releaseUrl]:[releaseUrl];
+    for(const url of choices)try{
+      const response=await fetch(url,{cache:'no-cache',signal:AbortSignal.timeout(8000)});if(!response.ok)throw Error('Release unavailable');const value=await response.json();
+      if(!/^\d+\.\d+\.\d+$/.test(value.version)||!/^DeviceBridge-(?:Setup-)?\d+\.\d+\.\d+\.exe$/.test(value.filename)||!Number.isSafeInteger(value.bytes)||value.bytes<512||value.bytes>512*1024*1024||!/^[a-f0-9]{64}$/i.test(value.sha256)||!Array.isArray(value.parts)||!value.parts.length||value.parts.length>64||value.parts.some(part=>!/^downloads\/[A-Za-z0-9_.-]+\.part$/.test(part)))throw Error('Invalid release metadata');
+      if(value.releaseUrl&&!/^https:\/\/github\.com\/Satish01-oss\/Drive-Bridge\/releases\/tag\/v\d+\.\d+\.\d+$/.test(value.releaseUrl))throw Error('Invalid release notes');
+      manifest=value;manifestBase=url;showRelease(value);return value;
+    }catch{}
+    throw Error('Release information unavailable');
+  }
+  const manifestReady = loadManifest();
   // Keep a failed prefetch from becoming an unhandled rejection; clicking retries.
   manifestReady.catch(() => {});
   const fail = () => {
@@ -26,17 +43,14 @@
     busy = true; retry.hidden = true; progress.hidden = false; progress.value = 0;
     title.textContent = 'Getting your app ready.'; message.textContent = 'Keep this page open. Your download will start when it is ready.'; percent.textContent = 'Preparing…';
     try {
-      if (!manifest) {
-        const response = await fetch(releaseUrl, {cache:'no-cache'});
-        if (!response.ok) throw new Error('Release unavailable'); manifest = await response.json(); showRelease(manifest);
-      }
+      await loadManifest();
       const parts = new Array(manifest.parts.length); let cursor = 0, received = 0;
       const controller = new AbortController();
       try {
         await Promise.all(Array.from({length: Math.min(3, manifest.parts.length)}, async () => {
           while (cursor < manifest.parts.length) {
             const index = cursor++;
-            const response = await fetch(manifest.parts[index], {signal:controller.signal});
+            const response = await fetch(new URL(manifest.parts[index],manifestBase), {signal:controller.signal});
             if (!response.ok) throw new Error('Download unavailable');
             const bytes = new Uint8Array(await response.arrayBuffer());
             parts[index] = bytes; received += bytes.length;

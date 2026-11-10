@@ -26,3 +26,5 @@ android/local.properties
 **/setup-report.txt
 **/audio-capture-check.txt
 android/.kotlin/
+frontend/dist/
+.vercel/

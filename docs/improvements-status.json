@@ -488,7 +488,7 @@
       "plan": "Add automatic update checking, in-app download and verified Android installer handoff. Publish a versioned release descriptor; refresh the public update feed automatically after GitHub releases.",
       "acceptance": "After the one-time manual upgrade from the older app, the phone detects a later release, downloads it inside the app and installs it after Android approval while preserving saved devices.",
       "status": "in_progress",
-      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install. Signed preview 6 (version code 906) is published with its release descriptor. GitHub release events automatically refresh the Android update feed; the physical update handoff remains pending."
+      "evidence": "Implemented native update check/download/install, SHA-256 and size verification, package/version/publisher matching, a narrow private update FileProvider and Android approval handling. Added GitHub-release-to-update-feed synchronization with five passing tests. Native update-policy checks pass; physical download/install/persistence acceptance still requires the upgraded phone. Older installed previews cannot gain this updater without one final manual install. Signed preview 6 (version code 906) is published with its release descriptor. GitHub release events automatically refresh the Android update feed; the physical update handoff remains pending. The user installed preview 6 over the existing app, confirmed App updates is visible, checked the live feed successfully and confirmed the saved PC remained listed. Installing a later release through this updater is the next acceptance check."
     },
     {
       "id": "android-update-policy",
@@ -515,8 +515,44 @@
       "plan": "Use Android immersive fullscreen, keep the computer screen fitted to the available area, place touch/right-click/scroll/sound/microphone/shortcut controls in a hamburger Tools menu, and keep text plus Send at the bottom.",
       "acceptance": "On a physical Android phone, fullscreen opens/exits, Tools exposes every existing control, and text/Send remain usable in both orientations with the keyboard open.",
       "status": "in_progress",
-      "evidence": "Requested and planned. Implementing after the preview 6 updater bootstrap so this feature can be delivered from inside the phone app. No fullscreen acceptance is claimed yet."
+      "evidence": "Implemented fullscreen with an overlay Tools menu, an always-visible typing/Send bar, Android immersive system-bar handling, keyboard/cutout insets and Back-to-exit. Three lifecycle tests pass, including cancellation during an unfinished fullscreen request. Layout-only browser checks pass at portrait 390×844, landscape 844×390 and reduced-height 390×420. Physical Android acceptance and preview 7 publication remain pending."
+    },
+    {
+      "id": "frontend-separation",
+      "group": "07 · Packaging, verification and release",
+      "title": "Separate the static frontend from the Render backend",
+      "plan": "Move website source to frontend/site, add a dependency-free build in frontend, and keep the connection backend in remote. Provide Vercel settings that work from the repository root.",
+      "acceptance": "A local frontend-only build verifies the real stable EXE, preview APK metadata, page links and update feed without building apps or starting the backend.",
+      "status": "done",
+      "evidence": "Moved website source into frontend/site and added frontend/build.mjs, frontend/package.json and Vercel configurations. The local build prepared the real stable 0.8.0 installer, verified its 65,153,291 bytes and SHA-256, verified page links and Android feed, and generated only frontend/dist. Twelve release/website tests pass. Render backend files remain separate."
+    },
+    {
+      "id": "vercel-frontend",
+      "group": "07 · Packaging, verification and release",
+      "title": "Deploy the frontend to the connected Vercel team",
+      "plan": "Create the DeviceBridge frontend project in the verified Satish Vercel team, deploy the tested static build from GitHub, and check the public page and actual app download.",
+      "acceptance": "A public Vercel URL loads the website and downloads the verified versioned Windows installer; the connection service stays on Render.",
+      "status": "in_progress",
+      "evidence": "The user authorized a new project in the connected team. Created devicebridge-frontend (prj_IM8VZ3LmHIhN1AgmuKzzy4BtRvnF). Local static build passes. Production deployment and browser/download acceptance are next."
+    },
+    {
+      "id": "phone-microphone-availability",
+      "group": "03 · Windows remote host",
+      "title": "Resolve the unavailable phone microphone control",
+      "plan": "Check the active host permission grant and effective audio capability. Explain missing permission or driver setup clearly, then test the phone microphone after explicit Windows approval.",
+      "acceptance": "The phone microphone control is available for an approved microphone grant and a Windows recording app receives the phone audio.",
+      "status": "in_progress",
+      "evidence": "The user reports that the microphone is unavailable. The observed phone test grant allowed view and input only; microphone permission was not included. A fresh host-approved microphone grant and native routing/driver check are still required. Website deployment is the current user priority; no microphone fix is claimed yet."
+    },
+    {
+      "id": "fullscreen-layout-checks",
+      "group": "04 · Android and future phone controllers",
+      "title": "Verify fullscreen control layout and cancellation behavior",
+      "plan": "Test the isolated production display controller and inspect phone-sized layouts without enabling screen capture or desktop control.",
+      "acceptance": "Fullscreen/exit/tools work in layout checks, typing stays at the bottom without horizontal overflow, and a canceled request cannot reopen fullscreen.",
+      "status": "done",
+      "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
     }
   ],
-  "stage": "Preview 6 is published with Remove PC and verified in-app Android updates. Basic phone typing and same-Wi-Fi screen viewing are user-confirmed. One final manual update enables the updater; fullscreen with a Tools menu and bottom typing bar is being built next. Physical removal/update, audio, separate-network and outage acceptance remain pending."
+  "stage": "Vercel frontend deployment is the current priority: website source is separated and its real-download build passes. Preview 6 installed on Android with saved PC preserved and live update check working. Preview 7 fullscreen layouts and cancellation checks pass; packaging and physical acceptance are pending. Microphone permission/routing investigation is tracked separately."
 }
