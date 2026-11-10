@@ -24,6 +24,8 @@ jobs:
           node-version: '22'
       - name: Test release synchronization
         run: node --test scripts/sync-github-release.test.mjs
+      - name: Build improvements tracker
+        run: node scripts/build-improvements.mjs
       - name: Prepare the latest published Windows release
         run: node scripts/sync-github-release.mjs
         env:
