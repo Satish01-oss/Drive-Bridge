@@ -1,7 +1,9 @@
-DEVICEBRIDGE 0.7 PREVIEW — ONE DESK. TWO PCs.
+DEVICEBRIDGE 0.8 PREVIEW — ONE DESK. TWO PCs.
 
 ONE APP ON BOTH PCs
-Use the same DeviceBridge.exe on both Windows 10/11 x64 PCs. Close older copies.
+Run DeviceBridge-Setup-0.8.0.exe once on both Windows 10/11 x64 PCs.
+Then open DeviceBridge from your desktop or Start menu. Close older copies
+using the tray’s Disconnect and quit command before installing an update.
 Both PCs must be on the same trusted local network. One may use Wi-Fi and the
 other Ethernet. Guest Wi-Fi and router isolation can block local communication.
 
@@ -18,7 +20,7 @@ CONNECT IN THREE STEPS
    control. Ctrl+Alt+Esc (or Ctrl+Alt+Pause) disconnects immediately.
 
 The layout describes the position of physical screens. Screen images are not
-streamed. Both PCs should use version 0.7 for automatic screen-edge handoff.
+streamed. Both PCs should use version 0.8 for automatic screen-edge handoff.
 The key uses six uppercase letters/numbers without ambiguous I/O/0/1 characters.
 It expires after ten minutes. Five incorrect pairing proofs lock that invitation;
 click New key to generate another. The key is not broadcast or sent as plaintext.
@@ -53,7 +55,7 @@ https://vb-audio.com/Services/licensing.htm
 No extra driver download is needed. Its original package is included unchanged.
 
 WINDOWS AND THE SYSTEM TRAY
-Minimize and maximize keep sharing running. X hides an active session to the
+Minimize hides the session to the tray and keeps sharing running. X also hides it to the
 tray instead of disconnecting. Open DeviceBridge again or double-click its tray
 icon to restore it. Use the tray’s Disconnect and quit command to exit.
 Ctrl+Alt+Esc still stops sharing immediately.
@@ -78,8 +80,9 @@ The app is unsigned. Windows SmartScreen/unknown-publisher prompts may appear;
 verified app signing remains pending. Driver elevation/restart and a calling
 app's microphone selection cannot be silently eliminated.
 A physical Wi-Fi/Ethernet session was observed stable for over two minutes in
-version 0.6.1. Version 0.7 audio, window behavior and calling-app routing still
-need the current two-PC acceptance test.
+version 0.6.1. The user reported keyboard, mouse, sound and microphone working
+in version 0.7. Version 0.8 adds independent background packet delivery and a
+Windows installer; its physical two-PC acceptance still needs confirmation.
 Automated transport, short-key and geometry checks are not hardware verification.
 No screen streaming, sign-in/secure-desktop control, multi-PC sessions, automatic
 updates or guarantee for every Windows device. Current binary: x64, Windows 10/11,
@@ -88,7 +91,9 @@ F8 and Pause are reserved; Ctrl+Alt+Esc is an additional emergency shortcut.
 
 SOURCE AND TESTS
 Windows .NET 8 SDK is required to build the source. Build.ps1 -Portable publishes
-a compressed self-contained executable. Help, licenses and the driver are embedded.
+a compressed self-contained executable. Build-Installer.ps1 makes the normal
+Windows installer, including desktop and Start menu shortcuts and an uninstall
+entry in Settings. Help, licenses and the driver are embedded.
 DeviceBridge.exe --self-test runs non-hardware regression checks and writes its
 result beside the executable. --inventory exports a read-only device/setup report.
 See ARCHITECTURE.md, TWO-PC-TEST.txt and SIGNING-AND-DRIVER.txt for details.

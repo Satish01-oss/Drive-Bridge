@@ -1,6 +1,6 @@
 # DeviceBridge Windows app source
 
-This is the Windows Forms / .NET 8 source for DeviceBridge **0.7.0**. The website is in `../../dist/`. Source code, third-party notices, bundled driver archive and regression checks are saved together here. Generated build directories and user connection data are excluded from Git.
+This is the Windows Forms / .NET 8 source for DeviceBridge **0.8.0**. The website is in `../../dist/`. Source code, third-party notices, bundled driver archive and regression checks are saved together here. Generated build directories and user connection data are excluded from Git.
 
 ## Build on Windows
 
@@ -12,6 +12,8 @@ From this repository's root, use PowerShell:
 ./app/DeviceBridge/Build.ps1
 ./app/DeviceBridge/Build.ps1 -Portable
 ```
+
+To create the normal installed Windows app, install Inno Setup 6/7 on the build machine and run `./app/DeviceBridge/Build-Installer.ps1` from the repository root. The result is `app/DeviceBridge/installer-output/DeviceBridge-Setup-0.8.0.exe`. It installs per user, creates desktop and Start menu shortcuts, and registers an uninstall entry in Windows Settings. The end user needs only this one installer.
 
 The first command builds the source; the second publishes the complete app, runtime and included driver as `app/DeviceBridge/portable/DeviceBridge.exe`. NuGet restores the package versions declared in `DeviceBridge.csproj`. No development SDK or generated `bin/obj` files need to be committed.
 
@@ -33,8 +35,8 @@ GitHub Actions runs the Windows build and regression checks for app changes. Its
 1. Edit the app here and update `<Version>` in `DeviceBridge.csproj` for a new release.
 2. Build with `-Portable`, run regression checks and test on two Windows PCs.
 3. If a trusted publisher certificate is available, sign the executable with `Sign-Release.ps1 -CertificateThumbprint <thumbprint>`. The default target is `portable/DeviceBridge.exe`. Keep private keys and certificates out of Git.
-4. Save the final EXE as `DeviceBridge-<version>.exe` (for example `DeviceBridge-0.8.0.exe`). The Windows workflow produces this versioned filename automatically. If you sign it, sign the final file before uploading it; signing changes its checksum.
-5. Publish a normal GitHub Release tagged `v<version>` with that EXE attached. Pages automatically packages and verifies it, updates both downloads and the visible website version, and deploys. There is no need to edit the website manifests or split the EXE manually. See [release instructions](../../RELEASING.md).
+4. Build the installer with `Build-Installer.ps1`. The Windows workflow produces `DeviceBridge-Setup-<version>.exe` automatically and tests installation, desktop/Start menu shortcuts, reinstallation and uninstallation on its disposable runner. Sign the app before building the installer, then sign the final installer too when trusted signing is available; signing changes checksums.
+5. Publish a normal GitHub Release tagged `v<version>` with the installer EXE attached. Pages automatically packages and verifies it, updates both downloads and the visible website version, and deploys. There is no need to edit the website manifests or split the EXE manually. See [release instructions](../../RELEASING.md).
 
 The original embedded archive must remain unchanged: `vendor/VBCABLE_Driver_Pack46.zip`, SHA-256 `bc44e8974191a5a2427d6c979e2dab08dbb09925f3f435dfa2f0ba3e45b6eb90`. The app checks this hash before exposing its installer.
 

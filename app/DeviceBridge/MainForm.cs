@@ -24,17 +24,21 @@ public sealed class MainForm : Form
     readonly Label role = new() { Text = "No connection", AutoSize = true, Font = new Font("Segoe UI", 12, FontStyle.Bold) };
     readonly Label hint = new() { AutoSize = true, MaximumSize = new Size(670, 0) };
     PairingHost? host;
-    Connection? connection;
+    volatile Connection? connection;
     readonly InputBridge input;
     readonly AudioBridge audio;
     CancellationTokenSource? attempt;
     readonly List<(int Id, string Name)> outputs;
-    bool desk, remoteInput, receivingInput, resetting;
+    bool desk, remoteInput, resetting;
+    volatile bool receivingInput;
+    readonly object receiveGate = new();
     string? persistenceError;
     string lastSession = "No active connection";
     long generation;
     TrustedPeer? trusted = TrustedPeer.Load();
-    SessionInbox? inbox;
+    SessionWorker? inbox;
+    sealed record ReceiveOptions(bool Desk, bool AllowInput, bool HearAudio, int Output);
+    volatile ReceiveOptions receiveOptions = new(false, false, false, -1);
     readonly System.Windows.Forms.Timer incomingTimer = new() { Interval = 15 };
     readonly ScreenLayoutPicker layoutPicker;
     readonly CheckBox edgeSwitch = new() { Text = "Move to the chosen screen edge to switch PCs", AutoSize = true };
@@ -47,10 +51,10 @@ public sealed class MainForm : Form
     {
         desk = deskMode;
         var savedLayout = DeskLayout.Load(); layoutPicker = new ScreenLayoutPicker(savedLayout.Side); edgeSwitch.Checked = true;
-        Text = "DeviceBridge 0.7 · " + (desk ? "Your devices" : "Connect this PC"); ClientSize = new Size(740, 740); MinimumSize = new Size(760, 780);
+        Text = AppActivation.Title + " · " + (desk ? "Your devices" : "Connect this PC"); Icon = AppActivation.Icon; ClientSize = new Size(740, 740); MinimumSize = new Size(760, 780);
         Font = new Font("Segoe UI", 10); BackColor = Color.FromArgb(245, 247, 249);
         StartPosition = FormStartPosition.CenterScreen;
-        tray = new BackgroundSession(this, () => connection != null || host != null || attempt != null, () => Reset("Disconnected. Sharing stopped."));
+        tray = new BackgroundSession(this, () => true, () => Reset("Disconnected. Sharing stopped."));
         input = new InputBridge(p => connection?.Send(p) ?? false);
         input.Emergency += reason => connection?.Stop(reason);
         input.EdgeEntered += fraction => { var revision = layoutRevision; Ui(() => { if (revision == layoutRevision) StartInput(true, fraction); }); };
@@ -137,7 +141,7 @@ public sealed class MainForm : Form
         join.Click += async (_, _) => await JoinAsync(); disconnect.Click += (_, _) => Reset("Disconnected. Sharing stopped."); control.Click += (_, _) => ToggleInput();
         reconnect.Click += async (_, _) => { if (trusted == null) return; if (trusted.Desk) await GenerateAsync(true); else await JoinAsync(trusted.Invitation); };
         forget.Click += (_, _) => { try { TrustedPeer.Forget(); trusted = null; status.Text = "Saved pairing removed. Generate a new key on both PCs to replace their previous pairing."; RefreshUi(); } catch (Exception e) { status.Text = "Could not remove saved pairing: " + e.Message; } };
-        allowInput.CheckedChanged += (_, _) => { if (!allowInput.Checked) { receivingInput = false; input.ReleaseAll(); } connection?.Send(new Packet("permission", A: allowInput.Checked ? 1 : 0)); };
+        allowInput.CheckedChanged += (_, _) => { lock (receiveGate) { UpdateReceiveOptions(); if (!allowInput.Checked) { receivingInput = false; input.ReleaseAll(); } } connection?.Send(new Packet("permission", A: allowInput.Checked ? 1 : 0)); };
         layoutPicker.Changed += _ => SaveLayout(); edgeSwitch.CheckedChanged += (_, _) => SaveLayout();
         sendAudio.CheckedChanged += (_, _) => ChangeCapture();
         microphoneInput.SelectedIndexChanged += (_, _) =>
@@ -147,12 +151,10 @@ public sealed class MainForm : Form
             try { choice.Save(); } catch { status.Text = "Microphone selected for this session; its preference could not be saved."; }
             if (sendAudio.Checked && connection != null) ChangeCapture();
         };
-        hearAudio.CheckedChanged += (_, _) => { audio.StopPlayback(); if (hearAudio.Checked) connection?.Send(new Packet("refresh-audio")); };
-        output.SelectedIndexChanged += (_, _) => { audio.StopPlayback(); if (hearAudio.Checked) connection?.Send(new Packet("refresh-audio")); };
+        hearAudio.CheckedChanged += (_, _) => { lock (receiveGate) { UpdateReceiveOptions(); audio.StopPlayback(); } if (hearAudio.Checked) connection?.Send(new Packet("refresh-audio")); };
+        output.SelectedIndexChanged += (_, _) => { lock (receiveGate) { UpdateReceiveOptions(); audio.StopPlayback(); } if (hearAudio.Checked) connection?.Send(new Packet("refresh-audio")); };
         incomingTimer.Tick += (_, _) =>
         {
-            var current = inbox;
-            for (int count = 0; count < 128 && current != null && ReferenceEquals(current, inbox) && current.TryTake(out var packet); count++) Process(packet);
             if (Environment.TickCount64 - lastAudioMeter >= 100)
             {
                 lastAudioMeter = Environment.TickCount64;
@@ -162,7 +164,8 @@ public sealed class MainForm : Form
                 if (audioHint.Text != message) audioHint.Text = message;
             }
         };
-        FormClosing += (_, e) => { if (e.Cancel) return; Reset("Closing."); incomingTimer.Dispose(); input.Dispose(); audio.Dispose(); tray.Dispose(); };
+        // Cancelled close/minimize events must never dispose the sharing session.
+        FormClosed += (_, _) => { Reset("Closing."); incomingTimer.Dispose(); input.Dispose(); audio.Dispose(); tray.Dispose(); };
         Resize += (_, _) => ConnectionLog.Write("Window state: " + WindowState);
         Shown += async (_, _) => { if (useSaved && trusted != null) { if (desk) await GenerateAsync(true); else await JoinAsync(trusted.Invitation); } else if (desk) await GenerateAsync(); else key.Focus(); };
         RefreshUi();
@@ -175,7 +178,7 @@ public sealed class MainForm : Form
         var toggle = RegisterHotKey(Handle, 1, 0x4000, 0x77);
         var emergency = RegisterHotKey(Handle, 2, 0x4003, 0x13);
         var escape = RegisterHotKey(Handle, 3, 0x4003, 0x1B);
-        if (!toggle || (!emergency && !escape)) status.Text = "A shortcut is used by another app. Automatic screen-edge switching still works. Close the session to disconnect; Ctrl+Alt+Esc is also handled during input capture.";
+        if (!toggle || (!emergency && !escape)) status.Text = "A shortcut is used by another app. Automatic screen-edge switching still works. Use Disconnect to stop sharing; Ctrl+Alt+Esc is also handled during input capture.";
     }
     protected override void OnHandleDestroyed(EventArgs e) { UnregisterHotKey(Handle, 1); UnregisterHotKey(Handle, 2); UnregisterHotKey(Handle, 3); base.OnHandleDestroyed(e); }
     protected override void WndProc(ref Message m)
@@ -227,9 +230,11 @@ public sealed class MainForm : Form
     void Attach(Connection c)
     {
         connection = c;
-        var pending = inbox = new SessionInbox();
+        var pending = inbox = new SessionWorker(packet => ProcessInBackground(c, packet), error => c.Stop("Sharing stopped: " + error.Message));
         c.Received += packet => { if (!pending.TryAdd(packet)) c.Stop("Incoming event queue filled. Sharing stopped to prevent delayed input."); };
-        c.Closed += reason => { pending.Close(); input.ReleaseAll(); Ui(() => { if (connection == c) Reset(reason); }); };
+        c.Closed += reason => { input.ReleaseAll(); Ui(() => { if (connection == c) Reset(reason); }); };
+        if (!desk) allowInput.Checked = true;
+        UpdateReceiveOptions();
         incomingTimer.Start();
         c.Start(); status.Text = persistenceError ?? (desk ? "Connected. Choose where the other screen sits; then use its edge or F8." : "Connected and allowed. The checked control box below is your approval; uncheck it to stop remote control.");
         RefreshUi();
@@ -247,7 +252,45 @@ public sealed class MainForm : Form
             }
         }
         if (desk) hostAddress.Text = "Sharing stays active when this window is minimized or hidden in the tray.";
-        if (c.PeerProtocol < 7) status.Text = "Connected to an older app. Update BOTH PCs to version 0.7 for the audio and tray fixes.";
+        if (c.PeerProtocol < Connection.Protocol) status.Text = "Connected to an older app. Install version 0.8 on BOTH PCs for background sharing fixes.";
+    }
+    void UpdateReceiveOptions() { lock (receiveGate) receiveOptions = new(desk, allowInput.Checked, hearAudio.Checked, output.SelectedIndex >= 0 ? outputs[output.SelectedIndex].Id : -1); }
+    void ProcessInBackground(Connection current, Packet packet)
+    {
+        if (!ReferenceEquals(connection, current) || !current.IsConnected) return;
+        lock (receiveGate)
+        {
+        if (!ReferenceEquals(connection, current) || !current.IsConnected) return;
+        var options = receiveOptions;
+        switch (packet.Kind)
+        {
+            case "input-start" when !options.Desk:
+                receivingInput = options.AllowInput;
+                if (receivingInput && current.PeerProtocol >= 5)
+                {
+                    if (!Enum.IsDefined((DeviceSide)packet.A) || packet.B is < 0 or > 65535 || packet.C is < 0 or > 3) throw new IOException("Invalid screen layout request.");
+                    input.ConfigureRemote((DeviceSide)packet.A, packet.B, (packet.C & 1) != 0, (packet.C & 2) != 0);
+                }
+                current.Send(new Packet("input-ack", A: receivingInput ? 1 : 0));
+                return;
+            case "input-end" when !options.Desk:
+                receivingInput = false; input.ReleaseAll(); return;
+            case "key" or "move" or "mouse" when !options.Desk:
+                if (receivingInput && options.AllowInput) input.Apply(packet, current.Lifetime);
+                return;
+            case "sound" or "sound-format" or "sound-stop" or "mic" or "mic-format" or "mic-stop":
+                if (!options.HearAudio) return;
+                try { audio.Receive(packet, options.Desk ? "sound" : "mic", options.Output); }
+                catch (Exception error) when (error is NAudio.MmException or COMException)
+                {
+                    audio.PlaybackError(error);
+                    Ui(() => { if (connection == current) { hearAudio.Checked = false; status.Text = "Audio output unavailable: " + error.Message; } });
+                }
+                return;
+            default:
+                Ui(() => { if (connection == current) Process(packet); }); return;
+        }
+        }
     }
     void SaveTrusted(TrustedPeer peer)
     {
@@ -263,38 +306,19 @@ public sealed class MainForm : Form
             {
                 case "permission" when desk:
                     remoteInput = p.A == 1; if (!remoteInput) StopInput(); RefreshUi(); break;
-                case "input-start" when !desk:
-                    receivingInput = allowInput.Checked;
-                    if (receivingInput && connection.PeerProtocol >= 5)
-                    {
-                        if (!Enum.IsDefined((DeviceSide)p.A) || p.B is < 0 or > 65535 || p.C is < 0 or > 3) throw new IOException("Invalid screen layout request.");
-                        input.ConfigureRemote((DeviceSide)p.A, p.B, (p.C & 1) != 0, (p.C & 2) != 0);
-                    }
-                    connection.Send(new Packet("input-ack", A: receivingInput ? 1 : 0)); break;
                 case "input-ack" when desk:
                     if (p.A != 1) { StopInput(); status.Text = "On the other PC, check Allow this PC to receive keyboard and mouse."; }
                     break;
                 case "input-return" when desk:
                     if (p.A is < 0 or > 65535) throw new IOException("Invalid return position.");
                     StopInput(p.A); break;
-                case "input-end" when !desk:
-                    receivingInput = false; input.ReleaseAll(); break;
-                case "key" or "move" or "mouse" when !desk && receivingInput && allowInput.Checked:
-                    input.Apply(p, connection.Lifetime); break;
                 case "speaker-probe" when !desk:
                     connection.Send(AudioSignal.SpeakerTestPacket()); break;
                 case "speaker-test" when desk:
                     _ = PlaySpeakerTest(p); break;
                 case "refresh-audio":
                     if (sendAudio.Checked) audio.StartCapture(desk); break;
-                default:
-                    if (hearAudio.Checked)
-                    {
-                        try { audio.Receive(p, desk ? "sound" : "mic", outputs[output.SelectedIndex].Id); }
-                        catch (Exception error) when (error is NAudio.MmException or COMException)
-                        { audio.PlaybackError(error); hearAudio.Checked = false; status.Text = "Audio output unavailable: " + error.Message; }
-                    }
-                    break;
+                default: break;
             }
         }
         catch (Exception e) { Reset("Sharing stopped: " + e.Message); }
@@ -350,10 +374,11 @@ public sealed class MainForm : Form
     void Reset(string message)
     {
         generation++; resetting = true;
-        incomingTimer.Stop(); inbox?.Close(); inbox = null;
+        incomingTimer.Stop();
         attempt?.Cancel(); attempt?.Dispose(); attempt = null;
         host?.Dispose(); host = null;
         var previous = connection; connection = null; previous?.Dispose();
+        inbox?.Dispose(); inbox = null;
         if (previous != null) lastSession = "Last session:\n" + previous.Diagnostics + "\nEnded: " + message;
         input.Stop(); input.ReleaseAll(); audio.Dispose();
         remoteInput = receivingInput = false;

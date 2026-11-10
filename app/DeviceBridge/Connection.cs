@@ -32,6 +32,7 @@ public static class Wire
 
 public sealed class Connection : IDisposable
 {
+    public const int Protocol = 8;
     readonly TcpClient client;
     readonly SslStream stream;
     readonly CancellationTokenSource stop = new();
@@ -59,7 +60,7 @@ public sealed class Connection : IDisposable
             ssl = new SslStream(client.GetStream(), false, (_, cert, _, _) => cert != null &&
                 CryptographicOperations.FixedTimeEquals(SHA256.HashData(cert.GetRawCertData()), Convert.FromHexString(invite.Fingerprint)));
             await ssl.AuthenticateAsClientAsync(new SslClientAuthenticationOptions { TargetHost = "DeviceBridge", EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13 }, token);
-            await Wire.WriteAsync(ssl, new Packet("auth", Text: invite.Secret, A: 7), token);
+            await Wire.WriteAsync(ssl, new Packet("auth", Text: invite.Secret, A: Protocol), token);
             var answer = await Wire.ReadAsync(ssl, token);
             if (answer.Kind != "ready" || answer.Data?.Length != 32) throw new IOException("Pairing rejected.");
             return new Connection(client, ssl, answer.Text ?? "Desk PC") { NextSecret = answer.Data, PeerProtocol = answer.A };

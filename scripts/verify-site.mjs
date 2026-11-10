@@ -11,7 +11,7 @@ async function localFile(path) {
 }
 for (const name of ['release.json', 'test-release.json']) {
   const m = JSON.parse(await localFile(resolve(root, name)));
-  if (m.filename !== `DeviceBridge-${m.version}.exe`) throw new Error('Version and filename disagree');
+  if (m.filename !== `DeviceBridge-${m.kind==='installer'?'Setup-':''}${m.version}.exe`) throw new Error('Version and filename disagree');
   const hash = createHash('sha256');
   let bytes = 0;
   for (const part of m.parts) {

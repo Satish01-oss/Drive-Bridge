@@ -12,6 +12,8 @@ public static class SelfTest
         void Check(bool okay, string name) { if (!okay) throw new Exception("FAILED: " + name); passed.Add(name); }
         await WindowLifecycleCheck.RunAsync();
         passed.Add("Minimize/maximize, close-to-tray, restore and explicit quit preserve the modeless session lifetime");
+        await BackgroundSharingCheck.RunAsync();
+        passed.Add("Both roles keep authenticated input/audio delivery running while minimized or closed to tray and the UI thread is blocked");
         var cableChoices = new List<(int Id, string Name)> { (-1, "Windows default"), (4, "CABLE In 16ch (VB-Audio Virtual"), (7, "CABLE Input (VB-Audio Virtual") };
         Check(DriverBundle.ChooseCableOutput(cableChoices, "CABLE In 16ch (VB-Audio Virtual Cable)") == 4 && DriverBundle.ChooseCableOutput(cableChoices, null) == 7, "Microphone routing reuses Windows' selected VB-CABLE pin and otherwise prefers the stereo input");
         if (ProcessLoopbackCapture.Supported)

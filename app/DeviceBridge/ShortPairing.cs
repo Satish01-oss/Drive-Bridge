@@ -65,7 +65,7 @@ public sealed class ShortPairing
     {
         code = Normalize(code);
         var nonce = RandomNumberGenerator.GetBytes(16);
-        await Wire.WriteAsync(stream, new Packet("short-pair", A: 7, Data: nonce), token);
+        await Wire.WriteAsync(stream, new Packet("short-pair", A: Connection.Protocol, Data: nonce), token);
         var challenge = await Wire.ReadAsync(stream, token);
         if (challenge.Kind != "srp-challenge" || challenge.Text?.Length != 32 || challenge.Data is not { Length: > 0 and <= 256 }) throw new PairingRejectedException();
         var group = Srp6StandardGroups.rfc5054_2048;

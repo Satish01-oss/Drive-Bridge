@@ -56,7 +56,9 @@
       save.textContent = 'Save ' + manifest.filename + ' ↓';
       ready = true; progress.value = 100; percent.textContent = '100% · App checked and ready';
       title.textContent = 'DeviceBridge v' + manifest.version + ' is ready.';
-      message.textContent = 'Open ' + manifest.filename + ' from your downloads. If the save did not start, use the button below. Download the same app on your other PC too.';
+      message.textContent = manifest.kind === 'installer'
+        ? 'Run ' + manifest.filename + ' to install DeviceBridge. Then open the app from your desktop or Start menu. Install the same version on your other PC too.'
+        : 'Open ' + manifest.filename + ' from your downloads. If the save did not start, use the button below. Download the same app on your other PC too.';
       save.click();
     } catch (e) { fail(); }
     finally { busy = false; }

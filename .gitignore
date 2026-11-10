@@ -5,6 +5,7 @@ Thumbs.db
 **/bin/
 **/obj/
 **/portable/
+**/installer-output/
 .vs/
 *.user
 *.suo

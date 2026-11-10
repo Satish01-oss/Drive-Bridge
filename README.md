@@ -16,7 +16,7 @@ Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 - `scripts/sync-github-release.mjs`: Fetches, verifies and packages the latest GitHub Release during deployment.
 - `.github/workflows/`: Automatic website publication and Windows app build/testing.
 
-Website changes publish through GitHub Pages. App changes build and test on a Windows runner and produce a versioned EXE in the workflow artifact. **Publishing a stable GitHub Release with that EXE automatically updates the website.** See [release instructions](RELEASING.md). Updating app source alone does not release a new download.
+Website changes publish through GitHub Pages. App changes build and test on a Windows runner and produce a versioned installer in the workflow artifact. **Publishing a stable GitHub Release with that installer EXE automatically updates the website.** See [release instructions](RELEASING.md). Updating app source alone does not release a new download.
 
 ## Hosting
 
@@ -26,9 +26,9 @@ The included GitHub Actions workflow validates the downloads and publishes `dist
 
 ## Download files
 
-The Pages workflow reads GitHub's latest stable Release, downloads its versioned Windows x64 EXE and validates its size, executable format and GitHub SHA-256 digest when available. It generates both manifests, download parts, visible version/date, and a release-notes link in the deployment artifact. It never commits generated release data back to the repository. No API tokens are exposed to website visitors.
+The Pages workflow reads GitHub's latest stable Release, downloads its versioned Windows installer (or a legacy portable x64 EXE) and validates its size, executable format and GitHub SHA-256 digest when available. It generates both manifests, download parts, visible version/date, and a release-notes link in the deployment artifact. It never commits generated release data back to the repository. No API tokens are exposed to website visitors.
 
-The browser joins the same-origin download parts, verifies their size and SHA-256 checksum, then saves one ordinary versioned EXE. Users never need to handle the parts. An incomplete or invalid new release fails validation and leaves the previously deployed website running. Drafts and prereleases are ignored. If no stable release exists, the checked-in v0.7.0 parts remain the fallback. Those are real binary data, not Git LFS pointers.
+The browser joins the same-origin download parts, verifies their size and SHA-256 checksum, then saves one ordinary versioned installer EXE. Users never need to handle the parts. An incomplete or invalid new release fails validation and leaves the previously deployed website running. Drafts and prereleases are ignored. If no stable release exists, the checked-in v0.7.0 parts remain the fallback. Those are real binary data, not Git LFS pointers.
 
 Fallback 0.7.0 SHA-256: `2a56276df30f9cff88714213a4014345926339f0e3cb29165a61b91519e497e9`
 
@@ -44,6 +44,6 @@ To preview, serve `dist/` through a local HTTP server. HTTPS (or localhost) is r
 
 ## App and third-party notices
 
-This repository contains the website, packaged download and Windows app source. Version 0.7.0 is an unsigned preview; Windows may display a publisher warning. The included microphone driver has a one-time approval and restart step.
+This repository contains the website, packaged download and Windows app source. The current app supports per-user installation, desktop/Start menu shortcuts and uninstall through Windows Settings. Version 0.7.0 is an unsigned preview; Windows may display a publisher warning. The included microphone driver has a one-time approval and restart step.
 
 VB-CABLE is included unchanged and remains subject to VB-Audio's licensing. Photo attribution and license links are preserved in `dist/credits.html` and `dist/PHOTO-LICENSES.txt`. The photographs and bundled driver are not covered by any blanket open-source license for this repository.

@@ -6,7 +6,7 @@ public sealed class WelcomeForm : Form
     MainForm? activeSession;
     public WelcomeForm()
     {
-        Text = AppActivation.Title; ClientSize = new Size(640, 570); MinimumSize = new Size(640, 600);
+        Text = AppActivation.Title; Icon = AppActivation.Icon; ClientSize = new Size(640, 570); MinimumSize = new Size(640, 600);
         Font = new Font("Segoe UI", 11); BackColor = Color.FromArgb(245, 247, 249); StartPosition = FormStartPosition.CenterScreen;
         var content = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(32), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         content.Controls.Add(new Label { Text = "One desk. Two PCs.", Font = new Font("Segoe UI", 26, FontStyle.Bold), AutoSize = true });

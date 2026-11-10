@@ -96,7 +96,7 @@ public sealed class PairingHost : IDisposable
                     var auth = await Wire.ReadAsync(ssl, timeout.Token);
                     if (auth.Kind == "discover")
                     {
-                        await Wire.WriteAsync(ssl, new Packet("discovery-ready", A: 7), timeout.Token);
+                        await Wire.WriteAsync(ssl, new Packet("discovery-ready", A: Connection.Protocol), timeout.Token);
                         ssl.Dispose(); client.Dispose(); continue;
                     }
                     if (auth.Kind == "short-pair" && !reconnecting) await shortPairing.AcceptAsync(ssl, auth, certificate.RawData, timeout.Token);
@@ -106,7 +106,7 @@ public sealed class PairingHost : IDisposable
                     // credential. Keep that credential on later reconnects so a
                     // dropped session cannot leave the saved peers out of sync.
                     var nextSecret = reconnecting ? Convert.FromHexString(Invitation.Secret) : RandomNumberGenerator.GetBytes(32);
-                    await Wire.WriteAsync(ssl, new Packet("ready", Text: Environment.MachineName, A: 7, Data: nextSecret), timeout.Token);
+                    await Wire.WriteAsync(ssl, new Packet("ready", Text: Environment.MachineName, A: Connection.Protocol, Data: nextSecret), timeout.Token);
                     listener.Stop(); discovery?.Dispose();
                     return new Connection(client, ssl, "Remote PC") { NextSecret = nextSecret, PeerProtocol = auth.A };
                 }

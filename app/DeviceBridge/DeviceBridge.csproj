@@ -6,7 +6,8 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>0.7.0</Version>
+    <ApplicationIcon>assets\DeviceBridge.ico</ApplicationIcon>
+    <Version>0.8.0</Version>
     <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
     <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>

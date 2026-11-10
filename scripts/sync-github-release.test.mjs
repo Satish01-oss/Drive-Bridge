@@ -72,6 +72,21 @@ test('no stable release preserves the checked-in working download without any wr
   assert.equal(await readFile(join(root,'downloads/old.part'),'utf8'),'old download');
 });
 
+test('installer is preferred to a portable app and its standard launcher updates installation guidance',async t=>{
+  const root=await workspace(t); const {release,exe}=fixture();
+  const installer=Buffer.from(exe);
+  installer.writeUInt16LE(0x14c,132); installer.writeUInt16LE(0x10b,152);
+  const asset={...release.assets[0],name:'DeviceBridge-Setup-0.8.0.exe',digest:'sha256:'+createHash('sha256').update(installer).digest('hex'),browser_download_url:`https://github.com/${repository}/releases/download/v0.8.0/DeviceBridge-Setup-0.8.0.exe`};
+  release.assets.unshift(asset);
+  assert.equal(selectAsset(release).kind,'installer');
+  const {fetcher}=mockFetch(release,installer);
+  const manifest=await syncRelease({root,fetcher});
+  assert.equal(manifest.filename,asset.name);
+  assert.equal(manifest.kind,'installer');
+  assert.match(await readFile(join(root,'index.html'),'utf8'),/Run the installer once on each PC/);
+  assert.deepEqual(Buffer.concat(await Promise.all(manifest.parts.map(p=>readFile(join(root,p))))),installer);
+});
+
 test('missing EXE, drafts, prereleases, wrong version and foreign assets are rejected',()=>{
   const {release}=fixture();
   for (const change of [{assets:[]},{draft:true},{prerelease:true},{tag_name:'latest'},
