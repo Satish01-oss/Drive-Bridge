@@ -4,30 +4,34 @@ public sealed class WelcomeForm : Form
 {
     readonly Button saved;
     MainForm? activeSession;
-    public WelcomeForm()
+    readonly bool designPreview;
+    public WelcomeForm(bool designPreview=false)
     {
-        Text = AppActivation.Title; Icon = AppActivation.Icon; ClientSize = new Size(640, 570); MinimumSize = new Size(640, 600);
-        Font = new Font("Segoe UI", 11); BackColor = Color.FromArgb(245, 247, 249); StartPosition = FormStartPosition.CenterScreen;
-        var content = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(32), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
-        content.Controls.Add(new Label { Text = "One desk. Two PCs.", Font = new Font("Segoe UI", 26, FontStyle.Bold), AutoSize = true });
-        content.Controls.Add(new Label { Text = "Open DeviceBridge on both PCs, on the same local network (Wi-Fi or Ethernet).\nWhat would you like to do on this PC?", AutoSize = true, Margin = new Padding(3, 8, 3, 24) });
-        var desk = Choice("Use this PC's keyboard, mouse, speakers and mic", "Share with the PC you pair. You can switch the microphone off anytime.");
-        var remote = Choice("Connect this PC to those devices", "Choose this on the other PC. You will paste a connection key.");
+        this.designPreview=designPreview;
+        Text = AppActivation.Title+(designPreview?" · Design preview":""); Icon = AppActivation.Icon; ClientSize = new Size(820, 660); MinimumSize = new Size(760, 640);
+        Font = new Font("Segoe UI", 11); BackColor = AppTheme.Background; ForeColor = AppTheme.Forest; StartPosition = FormStartPosition.CenterScreen;
+        var content = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(36), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
+        content.Controls.Add(new Label { Text = "Two PCs. One familiar setup.", Font = new Font("Segoe UI", 28, FontStyle.Bold), AutoSize = true });
+        content.Controls.Add(new Label { Text = "Choose what this PC will do. Open the app on both PCs, on the same\ntrusted network. Wi-Fi and Ethernet work together.", AutoSize = true, Margin = new Padding(3, 8, 3, 24) });
+        var desk = Choice("Share this PC’s devices", "My keyboard, mouse, headphones and microphone are here.");
+        desk.BackColor = AppTheme.Forest; desk.ForeColor = Color.White;
+        var remote = Choice("Use devices from another PC", "I’ll paste the connection key on this PC.");
         content.Controls.Add(desk); content.Controls.Add(remote);
-        saved = new Button { Text = "Reconnect my saved PC", Width = 550, Height = 44, Margin = new Padding(3, 15, 3, 8), FlatStyle = FlatStyle.Flat };
+        saved = AppTheme.Button("Reconnect my saved PC"); saved.AutoSize=false; saved.Width=700; saved.Height=44; saved.Margin=new Padding(3,15,3,8);
         content.Controls.Add(saved);
         content.Controls.Add(new Label { Text = "The desk PC shares its microphone after pairing or reconnecting. You can turn it off in the connected window.", AutoSize = true, MaximumSize = new Size(540, 0), ForeColor = Color.DimGray });
-        var checks = new Button { Text = "Check my setup", Width = 550, Height = 35, FlatStyle = FlatStyle.Flat };
+        var checks = AppTheme.Button("Check my setup"); checks.AutoSize=false; checks.Width=700; checks.Height=42;
         checks.Click += (_, _) => { using var test = new DiagnosticsForm(); test.ShowDialog(this); }; content.Controls.Add(checks);
         var help = new LinkLabel { Text = "Need a hand? Read the simple guide", AutoSize = true, Margin = new Padding(3, 8, 3, 0) }; content.Controls.Add(help);
-        content.Controls.Add(new Label { Text = "Windows app · No account · Microphone driver included", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(3, 18, 3, 0) });
+        content.Controls.Add(new Label { Text = "Windows v" + AppActivation.Version + " · Desktop app · No account · Microphone driver included", AutoSize = true, ForeColor = Color.DimGray, Margin = new Padding(3, 18, 3, 0) });
+        content.SizeChanged += (_, _) => { int width = Math.Max(300, content.ClientSize.Width - content.Padding.Horizontal - SystemInformation.VerticalScrollBarWidth - 8); foreach (Control child in content.Controls) { if (child is Button) child.Width = width; else if (child is Label) child.MaximumSize = new Size(width, 0); if (child is LinkLabel link) link.LinkColor = AppTheme.Forest; } };
         Controls.Add(content);
         desk.Click += (_, _) => Open(true, false); remote.Click += (_, _) => Open(false, false);
         saved.Click += (_, _) => { var peer = TrustedPeer.Load(); if (peer != null) Open(peer.Desk, true); };
         help.LinkClicked += (_, _) => { using var guide = new HelpForm(); guide.ShowDialog(this); };
         Activated += (_, _) => saved.Enabled = TrustedPeer.Load() != null;
     }
-    static Button Choice(string title, string description) => new() { Text = title + "\n" + description, TextAlign = ContentAlignment.MiddleLeft, Width = 550, Height = 84, Padding = new Padding(14), BackColor = Color.White, FlatStyle = FlatStyle.Flat, Margin = new Padding(3, 3, 3, 10), Cursor = Cursors.Hand };
+    static Button Choice(string title, string description) => new() { Text = title + "\n" + description, TextAlign = ContentAlignment.MiddleLeft, Width = 700, Height = 98, Padding = new Padding(14), BackColor = Color.White, ForeColor = AppTheme.Forest, FlatStyle = FlatStyle.Flat, Margin = new Padding(3, 3, 3, 10), Cursor = Cursors.Hand };
     protected override void WndProc(ref Message message)
     {
         if ((uint)message.Msg == AppActivation.RestoreMessage)
@@ -43,7 +47,7 @@ public sealed class WelcomeForm : Form
         Hide();
         try
         {
-            var session = activeSession = new MainForm(desk, reconnect);
+            var session = activeSession = new MainForm(desk, reconnect, designPreview);
             session.FormClosed += (_, _) =>
             {
                 activeSession = null;

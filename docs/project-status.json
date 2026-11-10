@@ -1,0 +1,209 @@
+{
+  "version": "0.8.0",
+  "updated": "2026-11-10",
+  "summary": "The refreshed GUI, background-sharing fix and native pointer-hiding check are verified. Final installer/release work is in progress. Your final two-PC acceptance checks remain below.",
+  "items": [
+    {
+      "id": "repo",
+      "group": "App foundations",
+      "title": "Website and Windows app source saved in GitHub",
+      "done": true,
+      "revision": 1,
+      "evidence": "Both are in Satish01-oss/Drive-Bridge, with build and release instructions."
+    },
+    {
+      "id": "pairing",
+      "group": "App foundations",
+      "title": "Six-character secure pairing on Wi-Fi and Ethernet",
+      "done": true,
+      "revision": 1,
+      "evidence": "Implemented and covered by secure loopback tests. The earlier v0.7 pair was reported working on Wi-Fi plus Ethernet."
+    },
+    {
+      "id": "devices",
+      "group": "App foundations",
+      "title": "Keyboard, mouse, headphones and microphone sharing implemented",
+      "done": true,
+      "revision": 1,
+      "evidence": "All four were reported working with v0.7. The new installer version still needs your final hands-on retest below."
+    },
+    {
+      "id": "background",
+      "group": "App foundations",
+      "title": "Sharing runs independently of the visible window",
+      "done": true,
+      "revision": 2,
+      "evidence": "Authenticated input/audio delivery passes while either role is minimized/closed to tray and its UI thread is deliberately blocked."
+    },
+    {
+      "id": "tray",
+      "group": "App foundations",
+      "title": "Minimize and X keep the session in the tray",
+      "done": true,
+      "revision": 1,
+      "evidence": "Automated lifecycle checks pass for hide, restore and explicit quit. Final two-PC acceptance remains below."
+    },
+    {
+      "id": "cursor",
+      "group": "App foundations",
+      "title": "Show the shared pointer on the active PC and restore it safely",
+      "done": true,
+      "revision": 1,
+      "evidence": "Implemented handoff masking and restoration. The native Windows two-second hiding/restore check passed, with cleanup/cancellation regression coverage. Final cross-PC check remains below."
+    },
+    {
+      "id": "gui",
+      "group": "Installed Windows app",
+      "title": "Refresh the app GUI and check both role screens",
+      "done": true,
+      "revision": 2,
+      "evidence": "Refreshed welcome and side-by-side role layouts. Both role screens were inspected; a regression check confirms normal and smaller sizes have no horizontal scrolling."
+    },
+    {
+      "id": "installer",
+      "group": "Installed Windows app",
+      "title": "One installer includes the app, runtime and microphone driver",
+      "done": true,
+      "revision": 1,
+      "evidence": "DeviceBridge-Setup-0.8.0.exe compiles. The microphone driver remains an explicit setup with Windows approval/restart."
+    },
+    {
+      "id": "installer-ci",
+      "group": "Installed Windows app",
+      "title": "Test installation, reinstallation and uninstallation",
+      "done": true,
+      "revision": 1,
+      "evidence": "GitHub's Windows runner passed app hash, desktop/Start menu shortcut, Installed Apps and uninstall checks before the GUI refresh."
+    },
+    {
+      "id": "desktop",
+      "group": "Installed Windows app",
+      "title": "Install the finished app on this PC and add its desktop shortcut",
+      "done": false,
+      "revision": 1,
+      "evidence": "The older copy has been exited normally. Installation will follow the GUI refresh."
+    },
+    {
+      "id": "app-ci",
+      "group": "Installed Windows app",
+      "title": "Pass app regression checks on the final build",
+      "done": false,
+      "revision": 2,
+      "evidence": "78 local app checks passed, including cursor cleanup, cancelled handoffs, secure transport and both GUI layouts. Final GitHub validation is pending."
+    },
+    {
+      "id": "auto-release",
+      "group": "Website and release",
+      "title": "Automatically update the website from GitHub Releases",
+      "done": true,
+      "revision": 1,
+      "evidence": "Implemented with versioned downloads, size/SHA-256 validation and failure protection. Installer support passes six release-sync tests."
+    },
+    {
+      "id": "publish",
+      "group": "Website and release",
+      "title": "Publish the new installer release on GitHub",
+      "done": false,
+      "revision": 1,
+      "evidence": "Waiting for final GUI and installer validation."
+    },
+    {
+      "id": "site-download",
+      "group": "Website and release",
+      "title": "Verify the website shows the new version and downloads the installer",
+      "done": false,
+      "revision": 1,
+      "evidence": "Will be checked after the release deployment."
+    },
+    {
+      "id": "second-install",
+      "group": "Your final two-PC checks",
+      "title": "Install the same new version on the other PC",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Quit the old app from its tray, run the new installer, and open DeviceBridge from the desktop on both PCs."
+    },
+    {
+      "id": "pair-real",
+      "group": "Your final two-PC checks",
+      "title": "Connect the Wi-Fi PC and Ethernet PC with a fresh key",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Use the same trusted router. Both app windows must show Connected."
+    },
+    {
+      "id": "keyboard-real",
+      "group": "Your final two-PC checks",
+      "title": "Type with the shared keyboard",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Type a short harmless sentence in Notepad on the other PC. Confirm key releases and shortcuts behave correctly."
+    },
+    {
+      "id": "mouse-real",
+      "group": "Your final two-PC checks",
+      "title": "Move, click, drag, scroll and cross the chosen screen edge",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Choose Left/Right/Above/Below. Check movement to the other PC and back without a switch button."
+    },
+    {
+      "id": "speaker-real",
+      "group": "Your final two-PC checks",
+      "title": "Hear the other PC through this PC's headphones",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Play audio on the other PC and confirm it arrives clearly through your headphones."
+    },
+    {
+      "id": "mic-real",
+      "group": "Your final two-PC checks",
+      "title": "Use the shared microphone in the other PC's calling app",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Confirm the incoming microphone meter moves. Select CABLE Output in the calling app and run its microphone test."
+    },
+    {
+      "id": "cursor-real",
+      "group": "Your final two-PC checks",
+      "title": "See the shared pointer only on the PC being controlled",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Move across the screen edge and back. Confirm the inactive pointer hides, the other PC’s own physical mouse reveals its pointer, and disconnect/emergency stop restores pointers."
+    },
+    {
+      "id": "background-real",
+      "group": "Your final two-PC checks",
+      "title": "Keep all sharing working after minimize and X on both PCs",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Continue typing and playing audio after hiding each app. Restore from the tray or desktop shortcut and confirm the session remains Connected."
+    },
+    {
+      "id": "stability-real",
+      "group": "Your final two-PC checks",
+      "title": "Run for two minutes, reconnect and test explicit disconnect",
+      "done": false,
+      "revision": 1,
+      "userTest": true,
+      "evidence": "Check there are no stuck keys or unexpected drops, saved reconnect works, and Disconnect/Disconnect and quit stop sharing."
+    },
+    {
+      "id": "signing",
+      "group": "Later release preparation",
+      "title": "Add verified Windows publisher signing",
+      "done": false,
+      "revision": 1,
+      "optional": true,
+      "evidence": "Deferred by your earlier choice. A verified signing account/certificate is still needed; unsigned installer warnings may remain."
+    }
+  ]
+}

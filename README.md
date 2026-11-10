@@ -20,6 +20,8 @@ Website changes publish through GitHub Pages. App changes build and test on a Wi
 
 ## Hosting
 
+The [project checklist](docs/DeviceBridge-Checklist.html) tracks completed implementation and the remaining two-PC acceptance checks. Edit `docs/project-status.json` with verified evidence and run `node scripts/build-checklist.mjs` to regenerate the standalone HTML. Manual checkbox changes stay in the browser; the HTML can also save an updated offline copy. Checkboxes do not start device sharing; pairing happens in the installed Windows app.
+
 The complete website is in `dist/`. Publish that directory on any HTTPS static host; no installation or build step is required. All site links are relative, including the two-PC test guide, so it also works under a repository path.
 
 The included GitHub Actions workflow validates the downloads and publishes `dist/` to GitHub Pages after pushes to `main`. For first-time Pages setup, select **Settings → Pages → Source → GitHub Actions**, then run **Verify and publish website** from the Actions tab if needed. The Pages URL appears in the deployment output once deployment succeeds.

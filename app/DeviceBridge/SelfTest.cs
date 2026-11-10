@@ -14,6 +14,13 @@ public static class SelfTest
         passed.Add("Minimize/maximize, close-to-tray, restore and explicit quit preserve the modeless session lifetime");
         await BackgroundSharingCheck.RunAsync();
         passed.Add("Both roles keep authenticated input/audio delivery running while minimized or closed to tray and the UI thread is blocked");
+        await GuiLayoutCheck.RunAsync();
+        passed.Add("Both role screens fit at normal and smaller window sizes without horizontal scrolling");
+        int hidden=0,restored=0;
+        using(var cover=new CursorCover(_=>hidden++,()=>restored++)) {cover.HideAt(Point.Empty);cover.HideAt(Point.Empty);Check(cover.Active&&hidden==1,"Pointer masking activates once during a handoff");cover.Restore();cover.Restore();Check(!cover.Active&&restored==1,"Pointer restore is balanced and safe to repeat");}
+        using(var cover=new CursorCover(_=>{throw new IOException("test show failed");},()=>restored++)){try{cover.HideAt(Point.Empty);}catch(IOException){}Check(!cover.Active&&restored==2,"A partial pointer-hide failure still restores pointer state");}
+        var closingCover=new CursorCover(_=>hidden++,()=>restored++);closingCover.HideAt(Point.Empty);closingCover.Dispose();closingCover.Dispose();Check(!closingCover.Active&&restored==3,"Disposing an active cursor cover restores it exactly once");
+        using(var cancelled=new CancellationTokenSource()){cancelled.Cancel();using var bridge=new InputBridge(_=>true);bridge.Start(cancelled.Token);bridge.EndRemoteControl(true,cancelled.Token);Check(!bridge.Capturing&&!bridge.PointerHidden,"Cancelled connections cannot start input capture or leave an invisible pointer");}
         var cableChoices = new List<(int Id, string Name)> { (-1, "Windows default"), (4, "CABLE In 16ch (VB-Audio Virtual"), (7, "CABLE Input (VB-Audio Virtual") };
         Check(DriverBundle.ChooseCableOutput(cableChoices, "CABLE In 16ch (VB-Audio Virtual Cable)") == 4 && DriverBundle.ChooseCableOutput(cableChoices, null) == 7, "Microphone routing reuses Windows' selected VB-CABLE pin and otherwise prefers the stereo input");
         if (ProcessLoopbackCapture.Supported)

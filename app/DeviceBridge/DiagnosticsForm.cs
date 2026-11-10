@@ -58,17 +58,37 @@ public sealed class DiagnosticsForm : Form
     string environment;
     int keyEvents, clicks;
     string speakerResult = "Not checked", microphoneResult = "Not checked";
+    string pointerResult="Not checked";
 
     public DiagnosticsForm(Func<string>? session = null, Func<double>? incomingPeak = null, Action? sharedSpeakerProbe = null)
     {
         this.session = session ?? (() => "No active session. Open Check my setup from a connected session to inspect traffic.");
         this.incomingPeak = incomingPeak ?? (() => 0);
-        Text = "DeviceBridge · Check my setup"; ClientSize = new Size(670, 760); MinimumSize = new Size(680, 780); Font = new Font("Segoe UI", 10);
+        Text = "DeviceBridge · Check my setup"; Icon=AppActivation.Icon; BackColor=AppTheme.Background; ClientSize = new Size(700, 700); MinimumSize = new Size(680, 700); Font = new Font("Segoe UI", 10);
         StartPosition = FormStartPosition.CenterParent;
         var root = new TableLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(20), ColumnCount = 1, RowCount = 3 };
         root.RowStyles.Add(new RowStyle(SizeType.Absolute, 330)); root.RowStyles.Add(new RowStyle(SizeType.Percent, 100)); root.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         var checks = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
         checks.Controls.Add(new Label { Text = "Check your devices — then test them across both PCs", AutoSize = true, Font = new Font("Segoe UI", 13, FontStyle.Bold) });
+        var pointer=AppTheme.Button("Check pointer hiding (2 seconds)");
+        pointer.Click+=async(_,_)=>{
+            pointer.Enabled=false;note.Text="Checking pointer hiding. Keep your mouse still for two seconds. It will return automatically.";
+            CursorCover? cover=null;using var worker=new HookLoop();bool hidden=false;
+            try{
+                var point=Cursor.Position;
+                worker.Invoke(()=>{cover=new CursorCover();cover.HideAt(point);});
+                await Task.Delay(100,closing.Token);hidden=!CursorCover.PointerVisible;
+                await Task.Delay(1900,closing.Token);
+            }catch(OperationCanceledException){}
+            catch(Exception error){pointerResult="Pointer check failed: "+error.Message;}
+            finally{worker.Invoke(()=>cover?.Dispose());}
+            if(!IsDisposed&&!closing.IsCancellationRequested){
+                try{await Task.Delay(100,closing.Token);}catch(OperationCanceledException){return;}
+                if(IsDisposed)return;
+                pointerResult=hidden&&CursorCover.PointerVisible?"Passed — pointer hidden and restored automatically":"Needs attention — pointer hiding/restore was not confirmed";
+                note.Text=pointerResult;pointer.Enabled=true;
+            }
+        };checks.Controls.Add(pointer);
         var sound = new Button { Text = "Play a short speaker test here", AutoSize = true };
         sound.Click += async (_, _) => { sound.Enabled = false; speakerResult = await PlayToneAsync() ? "Test tone played; human hearing confirmation required" : "Could not play test tone"; note.Text = speakerResult; sound.Enabled = true; };
         checks.Controls.Add(sound); checks.Controls.Add(microphone);
@@ -95,7 +115,7 @@ public sealed class DiagnosticsForm : Form
         refresh.Start();
         FormClosing += (_, _) => { closing.Cancel(); StopMeter(); refresh.Stop(); refresh.Dispose(); };
     }
-    string BuildReport() => environment + "\n" + session() + $"\nLocal speaker check: {speakerResult}\nLocal microphone check: {microphoneResult}\nKeys seen in test box (count only): {keyEvents}\nTest button clicks: {clicks}\nPhysical two-PC result: must be confirmed by the person doing the test.\nNo keystrokes or audio content is included in this report.";
+    string BuildReport() => environment + "\n" + session() + $"\nLocal speaker check: {speakerResult}\nLocal microphone check: {microphoneResult}\nPointer hiding check: {pointerResult}\nKeys seen in test box (count only): {keyEvents}\nTest button clicks: {clicks}\nPhysical two-PC result: must be confirmed by the person doing the test.\nNo keystrokes or audio content is included in this report.";
     public static string EnvironmentReport()
     {
         var text = new StringBuilder();

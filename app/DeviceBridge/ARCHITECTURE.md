@@ -16,3 +16,11 @@ SessionWorker owns an STA worker and bounded SessionInbox independently of any f
 User close and minimize hide the session to its tray on either role, including during pairing transitions. Cleanup runs after actual FormClosed rather than in a cancellable FormClosing handler. Restore normalizes a minimized window before showing it, avoiding another hide event. Explicit tray quit and Windows shutdown still exit. Regression checks exercise authenticated transport with a hidden/minimized window and a deliberately blocked UI thread on both roles without hardware capture or input injection.
 
 The Inno Setup installer installs per user under LocalAppData/Programs/DeviceBridge, creates desktop and Start menu shortcuts and a Settings uninstall entry, and refuses to update a running app using its existing session mutex. It has no autostart, silent driver installation or Windows service. The bundled driver remains an explicit, elevated one-time setup.
+
+
+## Cursor handoff ownership
+A no-activate, almost transparent 8px topmost window on the hook thread owns the parked cursor hit-test and handles WM_SETCURSOR with SetCursor(NULL). It uses a nonzero alpha so it still participates in hit-testing, without replacing Windows cursor schemes or adjusting per-thread ShowCursor counters. It is hidden on return/cancel/disconnect and is removed by Windows on process exit. The idle remote pointer uses the same mechanism and a physical-only mouse hook restores visibility immediately on that PC’s own mouse activity. Injected shared input does not trigger that restoration.
+
+Cursor cleanup is bound to the connection lifetime. Key release runs outside low-level hook callbacks and checks its session token so delayed old-session cleanup cannot release a newer session’s keys. Return notifications run after the input lock is released. The diagnostics check verifies global pointer visibility on the native Windows desktop using the same hook-thread cover.
+
+Windows references: [cursor ownership and visibility](https://learn.microsoft.com/windows/win32/menurc/about-cursors), [layered-window hit testing](https://learn.microsoft.com/windows/win32/winmsg/window-features).

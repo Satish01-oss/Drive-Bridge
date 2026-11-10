@@ -55,24 +55,28 @@ public sealed class ScreenLayoutPicker : UserControl
     public event Action<DeviceSide>? Changed;
     public ScreenLayoutPicker(DeviceSide side)
     {
-        selected = side; Width = 630; Height = 118;
+        selected = side; Width = 490; Height = 180;
         var title = new Label { Text = "Where is the other PC's screen?", Dock = DockStyle.Top, Height = 26, Font = new Font("Segoe UI", 10, FontStyle.Bold) };
         var body = new Panel { Dock = DockStyle.Fill };
-        var choices = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(8, 3, 0, 0) };
+        preview.Dock=DockStyle.Fill;
+        var choices = new FlowLayoutPanel { Dock = DockStyle.Top, Height=43, WrapContents=false, Padding = new Padding(0,3,0,0) };
         foreach (var option in new[] { (DeviceSide.Left, "← Left"), (DeviceSide.Right, "Right →"), (DeviceSide.Above, "↑ Above"), (DeviceSide.Below, "↓ Below") })
         {
-            var radio = new RadioButton { Text = option.Item2, Appearance = Appearance.Button, TextAlign = ContentAlignment.MiddleCenter, Width = 130, Height = 35, Checked = side == option.Item1 };
-            radio.CheckedChanged += (_, _) => { if (radio.Checked) { selected = option.Item1; preview.Invalidate(); Changed?.Invoke(selected); } };
+            var radio = new RadioButton { Text = option.Item2, Appearance = Appearance.Button, TextAlign = ContentAlignment.MiddleCenter, Width = 110, Height = 34, Checked = side == option.Item1, FlatStyle=FlatStyle.Flat, Margin=new Padding(0,0,7,0), BackColor=side==option.Item1?AppTheme.Forest:Color.White, ForeColor=side==option.Item1?Color.White:AppTheme.Forest };
+            radio.FlatAppearance.BorderColor=AppTheme.Border;radio.FlatAppearance.CheckedBackColor=AppTheme.Forest;
+            radio.CheckedChanged += (_, _) => { radio.BackColor=radio.Checked?AppTheme.Forest:Color.White;radio.ForeColor=radio.Checked?Color.White:AppTheme.Forest; if (radio.Checked) { selected = option.Item1; preview.Invalidate(); Changed?.Invoke(selected); } };
             choices.Controls.Add(radio);
         }
         preview.Paint += (_, e) =>
         {
-            Point here = selected switch { DeviceSide.Left => new(155, 25), DeviceSide.Right => new(35, 25), DeviceSide.Above => new(95, 49), _ => new(95, 2) };
-            Point there = selected switch { DeviceSide.Left => new(35, 25), DeviceSide.Right => new(155, 25), DeviceSide.Above => new(95, 2), _ => new(95, 49) };
-            DrawScreen(e.Graphics, here, "This PC", Color.FromArgb(26, 111, 99));
-            DrawScreen(e.Graphics, there, "Other PC", Color.FromArgb(80, 102, 119));
+            int x=preview.ClientSize.Width/2,y=preview.ClientSize.Height/2;
+            Point here = selected switch { DeviceSide.Left => new(x+12,y-18), DeviceSide.Right => new(x-96,y-18), DeviceSide.Above => new(x-42,y+7), _ => new(x-42,y-43) };
+            Point there = selected switch { DeviceSide.Left => new(x-96,y-18), DeviceSide.Right => new(x+12,y-18), DeviceSide.Above => new(x-42,y-43), _ => new(x-42,y+7) };
+            DrawScreen(e.Graphics, here, "This PC", AppTheme.Forest);
+            DrawScreen(e.Graphics, there, "Other PC", Color.FromArgb(106,125,101));
         };
-        body.Controls.Add(choices); body.Controls.Add(preview); Controls.Add(body); Controls.Add(title);
+        choices.SizeChanged+=(_,_)=>{foreach(Control choice in choices.Controls)choice.Width=Math.Max(65,(choices.ClientSize.Width-28)/4);};preview.Resize+=(_,_)=>preview.Invalidate();
+        body.Controls.Add(preview); body.Controls.Add(choices); Controls.Add(body); Controls.Add(title);
     }
     static void DrawScreen(Graphics graphics, Point point, string title, Color color)
     {

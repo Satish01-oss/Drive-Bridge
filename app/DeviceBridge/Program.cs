@@ -22,6 +22,7 @@ internal static class Program
             return;
         }
         ApplicationConfiguration.Initialize();
+        if (args.Contains("--ui-preview")) { if(args.Contains("--welcome")) Application.Run(new WelcomeForm(designPreview:true)); else Application.Run(new MainForm(args.Contains("--desk"), designPreview:true)); return; }
         using var instance = new Mutex(true, "Local\\DeviceBridge.Desktop.v1", out bool firstInstance);
         if (!firstInstance && !args.Contains("--inventory"))
         {

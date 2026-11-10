@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 
 namespace DeviceBridge;
 
-public sealed class MainForm : Form
+public sealed partial class MainForm : Form
 {
     readonly ComboBox address = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 260 };
     readonly TextBox key = new() { Multiline = true, Height = 66, Width = 690, ScrollBars = ScrollBars.Vertical };
@@ -45,10 +45,12 @@ public sealed class MainForm : Form
     bool setupOpen;
     long layoutRevision;
     readonly BackgroundSession tray;
+    readonly bool designPreview;
     public bool QuitRequested => tray.QuitRequested;
 
-    public MainForm(bool deskMode, bool useSaved = false)
+    public MainForm(bool deskMode, bool useSaved = false, bool designPreview = false)
     {
+        this.designPreview = designPreview;
         desk = deskMode;
         var savedLayout = DeskLayout.Load(); layoutPicker = new ScreenLayoutPicker(savedLayout.Side); edgeSwitch.Checked = true;
         Text = AppActivation.Title + " · " + (desk ? "Your devices" : "Connect this PC"); Icon = AppActivation.Icon; ClientSize = new Size(740, 740); MinimumSize = new Size(760, 780);
@@ -60,7 +62,7 @@ public sealed class MainForm : Form
         input.EdgeEntered += fraction => { var revision = layoutRevision; Ui(() => { if (revision == layoutRevision) StartInput(true, fraction); }); };
         input.ReturnRequested += fraction =>
         {
-            if (!desk && receivingInput) { receivingInput = false; input.ReleaseAll(); connection?.Send(new Packet("input-return", A: fraction)); }
+            if (!desk && receivingInput) { receivingInput = false; input.ReleaseAll();var current=connection;if(current?.Send(new Packet("input-return", A: fraction))==true)input.EndRemoteControl(true,current.Lifetime); }
         };
         selectedMicrophone = MicrophoneChoice.Load();
         var microphoneChoices = AudioBridge.Microphones();
@@ -76,72 +78,12 @@ public sealed class MainForm : Form
         foreach (var ip in Invitation.Addresses()) address.Items.Add(ip);
         if (address.Items.Count > 0) address.SelectedIndex = 0;
 
-        var root = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(28), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
-        var title = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.TopDown };
-        title.AutoSize = true; title.Dock = DockStyle.None; title.Margin = new Padding(0, 0, 0, 18);
-        title.Controls.Add(new Label { Text = desk ? "Your devices. Another PC." : "Let's connect this PC.", AutoSize = true, Font = new Font("Segoe UI", 23, FontStyle.Bold), ForeColor = Color.FromArgb(22, 43, 57) });
-        title.Controls.Add(new Label { Text = desk ? "Pair to share your devices, including the microphone. You can turn it off below." : "Paste the key from the PC with the keyboard and mouse.", AutoSize = true, ForeColor = Color.DimGray });
-        root.Controls.Add(title);
-        var pairing = new FlowLayoutPanel { Width = 665, AutoSize = true, BackColor = Color.White, Padding = new Padding(16), FlowDirection = FlowDirection.TopDown, WrapContents = false };
-        pairing.Controls.Add(new Label { Text = desk ? "YOUR CONNECTION KEY" : "PASTE CONNECTION KEY", AutoSize = true, Font = new Font("Segoe UI", 10, FontStyle.Bold) });
-        key.Width = 620; key.Height = 60; key.Multiline = false; key.MaxLength = 6; key.CharacterCasing = CharacterCasing.Upper; key.Font = new Font("Consolas", 26, FontStyle.Bold);
-        pairing.Controls.Add(key);
-        var actions = new FlowLayoutPanel { AutoSize = true, MaximumSize = new Size(630, 0) }; actions.Controls.AddRange(desk ? new Control[] { copy, generate, disconnect } : new Control[] { join, disconnect }); pairing.Controls.Add(actions);
-        if (!desk) pairing.Controls.Add(new Label { Text = "Connect & allow is the approval button. It permits keyboard/mouse control and shares this PC's sound. No separate Allow popup is needed.", AutoSize = true, MaximumSize = new Size(610, 0), ForeColor = Color.DimGray });
-        if (desk) pairing.Controls.Add(hostAddress);
-        var networkHelp = MakeButton("Fix connection / network access");
-        networkHelp.Click += (_, _) => ShowSetup(() => new NetworkSetupForm());
-        var supportActions = new FlowLayoutPanel { AutoSize = true, MaximumSize = new Size(630, 0) }; supportActions.Controls.Add(networkHelp); pairing.Controls.Add(supportActions);
-        root.Controls.Add(pairing); role.Margin = new Padding(3, 16, 3, 8); root.Controls.Add(role);
-        status.Dock = DockStyle.None; status.AutoSize = true; status.MinimumSize = new Size(630, 40); status.MaximumSize = new Size(650, 0); status.Margin = new Padding(3, 8, 3, 8); root.Controls.Add(status);
-        if (desk) root.Controls.Add(layoutPicker);
-        var devices = new FlowLayoutPanel { Width = 665, AutoSize = true, BackColor = Color.White, Padding = new Padding(16), FlowDirection = FlowDirection.TopDown, WrapContents = false };
-        devices.Controls.Add(desk ? hearAudio : sendAudio);
-        if (desk)
-        {
-            devices.Controls.Add(sendAudio);
-            devices.Controls.Add(new Label { Text = "Microphone to share", AutoSize = true }); devices.Controls.Add(microphoneInput);
-        }
-        else
-        {
-            devices.Controls.Add(allowInput);
-            var microphone = MakeButton("Set up included microphone driver");
-            microphone.Enabled = DriverBundle.CableOutputId() == -2;
-            if (!microphone.Enabled) microphone.Text = "Microphone driver ready";
-            microphone.Click += (_, _) => ShowSetup(() => new MicrophoneSetupForm());
-            devices.Controls.Add(microphone);
-        }
-        devices.Controls.Add(new Label { Text = desk ? "Connected? Move across the chosen screen edge. Keyboard follows automatically." : "Use the first PC's keyboard and mouse. Keep this app open.", AutoSize = true, ForeColor = Color.DimGray });
-        devices.Controls.Add(new Label { Text = desk ? "Your microphone level" : "This PC's sound being shared", AutoSize = true }); devices.Controls.Add(audioSendLevel);
-        devices.Controls.Add(new Label { Text = desk ? "Sound received from the other PC" : "Shared microphone received — choose CABLE Output in calls", AutoSize = true, MaximumSize = new Size(610, 0) }); devices.Controls.Add(audioReceiveLevel); devices.Controls.Add(audioHint);
-        root.Controls.Add(devices);
-        var more = new LinkLabel { Text = "More options", AutoSize = true, Margin = new Padding(3, 12, 3, 8) }; root.Controls.Add(more);
-        var advanced = new FlowLayoutPanel { Width = 665, AutoSize = true, FlowDirection = FlowDirection.TopDown, WrapContents = false, Visible = false };
-        if (desk) { advanced.Controls.Add(edgeSwitch); advanced.Controls.Add(control); advanced.Controls.Add(new Label { Text = "Network (chosen automatically)", AutoSize = true }); advanced.Controls.Add(address); }
-        else { advanced.Controls.Add(new Label { Text = "If automatic search fails: first PC's connection address", AutoSize = true }); advanced.Controls.Add(directAddress); }
-        advanced.Controls.Add(new Label { Text = "Audio output", AutoSize = true }); advanced.Controls.Add(output);
-        if (!desk) advanced.Controls.Add(hearAudio);
-        hint.MaximumSize = new Size(630, 0); advanced.Controls.Add(hint);
-        var savedActions = new FlowLayoutPanel { AutoSize = true }; savedActions.Controls.AddRange(new Control[] { reconnect, forget }); advanced.Controls.Add(savedActions);
-        more.LinkClicked += (_, _) => { advanced.Visible = !advanced.Visible; more.Text = advanced.Visible ? "Fewer options" : "More options"; }; root.Controls.Add(advanced);
-        var checkSetup = MakeButton("Check my setup");
-        checkSetup.Click += (_, _) =>
-        {
-            if (input.Capturing) StopInput();
-            ShowSetup(() => new DiagnosticsForm(
-                () => (desk ? "Role: desk PC\n" : "Role: other PC\n") + (connection?.Diagnostics ?? lastSession) + $"\nIncoming queue: {inbox?.Count ?? 0}\nInput sharing: {(desk ? input.Capturing : receivingInput)}\nAudio sending / receiving enabled: {sendAudio.Checked} / {hearAudio.Checked}\n" + audio.Diagnostics,
-                () => audio.IncomingPeak,
-                desk ? () => { connection?.Send(new Packet("speaker-probe")); } : null));
-        };
-        supportActions.Controls.Add(checkSetup);
-        var help = new LinkLabel { Text = "Help & licenses", AutoSize = true }; help.LinkClicked += (_, _) => ShowSetup(() => new HelpForm()); root.Controls.Add(help);
-        root.Controls.Add(new Label { Text = "X keeps sharing in the tray. Ctrl+Alt+Esc stops sharing. Tray → Disconnect and quit exits.", AutoSize = true, MaximumSize = new Size(650, 0), ForeColor = Color.DimGray, Font = new Font("Segoe UI", 9), Margin = new Padding(3, 10, 3, 0) });
-        Controls.Add(root);
+        BuildWindowLayout();
         generate.Click += async (_, _) => await GenerateAsync(); copy.Click += (_, _) => { if (key.Text.Length == 6) { Clipboard.SetText(key.Text); status.Text = "Six-character key copied. Paste it on the other PC and click Connect & allow."; } };
         join.Click += async (_, _) => await JoinAsync(); disconnect.Click += (_, _) => Reset("Disconnected. Sharing stopped."); control.Click += (_, _) => ToggleInput();
         reconnect.Click += async (_, _) => { if (trusted == null) return; if (trusted.Desk) await GenerateAsync(true); else await JoinAsync(trusted.Invitation); };
         forget.Click += (_, _) => { try { TrustedPeer.Forget(); trusted = null; status.Text = "Saved pairing removed. Generate a new key on both PCs to replace their previous pairing."; RefreshUi(); } catch (Exception e) { status.Text = "Could not remove saved pairing: " + e.Message; } };
-        allowInput.CheckedChanged += (_, _) => { lock (receiveGate) { UpdateReceiveOptions(); if (!allowInput.Checked) { receivingInput = false; input.ReleaseAll(); } } connection?.Send(new Packet("permission", A: allowInput.Checked ? 1 : 0)); };
+        allowInput.CheckedChanged += (_, _) => { lock (receiveGate) { UpdateReceiveOptions(); if (!allowInput.Checked) { receivingInput = false; input.EndRemoteControl(false); input.ReleaseAll(); } } connection?.Send(new Packet("permission", A: allowInput.Checked ? 1 : 0)); };
         layoutPicker.Changed += _ => SaveLayout(); edgeSwitch.CheckedChanged += (_, _) => SaveLayout();
         sendAudio.CheckedChanged += (_, _) => ChangeCapture();
         microphoneInput.SelectedIndexChanged += (_, _) =>
@@ -167,11 +109,15 @@ public sealed class MainForm : Form
         // Cancelled close/minimize events must never dispose the sharing session.
         FormClosed += (_, _) => { Reset("Closing."); incomingTimer.Dispose(); input.Dispose(); audio.Dispose(); tray.Dispose(); };
         Resize += (_, _) => ConnectionLog.Write("Window state: " + WindowState);
-        Shown += async (_, _) => { if (useSaved && trusted != null) { if (desk) await GenerateAsync(true); else await JoinAsync(trusted.Invitation); } else if (desk) await GenerateAsync(); else key.Focus(); };
+        Shown += async (_, _) => {
+            if (designPreview) { Text += " · Design preview"; role.Text="Design preview"; status.Text="No network connection or device sharing. This view is for checking the layout only."; key.PlaceholderText=""; generate.Enabled=copy.Enabled=join.Enabled=reconnect.Enabled=false; return; }
+            if (useSaved && trusted != null) { if (desk) await GenerateAsync(true); else await JoinAsync(trusted.Invitation); } else if (desk) await GenerateAsync(); else key.Focus();
+        };
         RefreshUi();
     }
     public void RestoreWindow() => tray.Restore();
-    static Button MakeButton(string text, bool primary = false) => new() { Text = text, AutoSize = true, Height = 36, Padding = new Padding(9, 3, 9, 3), FlatStyle = FlatStyle.Flat, BackColor = primary ? Color.FromArgb(26, 111, 99) : Color.FromArgb(237, 241, 243), ForeColor = primary ? Color.White : Color.FromArgb(22, 43, 57), Cursor = Cursors.Hand };
+    internal void QuitApp() => tray.Quit();
+    static Button MakeButton(string text, bool primary = false) => AppTheme.Button(text, primary);
     protected override void OnHandleCreated(EventArgs e)
     {
         base.OnHandleCreated(e);
@@ -189,6 +135,7 @@ public sealed class MainForm : Form
     void Ui(Action action) { if (!IsDisposed && IsHandleCreated) { try { BeginInvoke(action); } catch (InvalidOperationException) { } } }
     async Task GenerateAsync(bool saved = false)
     {
+        if (designPreview) return;
         string? ip = saved ? trusted?.Invitation.Address : address.SelectedItem as string;
         if (ip == null) { status.Text = "No local network address found. Connect by Wi-Fi or Ethernet, then try again."; return; }
         Reset(""); desk = true;
@@ -208,6 +155,7 @@ public sealed class MainForm : Form
     }
     async Task JoinAsync(Invitation? saved = null)
     {
+        if (designPreview) return;
         string? code = null;
         System.Net.IPEndPoint? direct = null;
         try { if (saved == null) code = ShortPairing.Normalize(key.Text); } catch (Exception e) { status.Text = e.Message; return; }
@@ -230,9 +178,16 @@ public sealed class MainForm : Form
     void Attach(Connection c)
     {
         connection = c;
+        input.BeginSession(c.Lifetime);
         var pending = inbox = new SessionWorker(packet => ProcessInBackground(c, packet), error => c.Stop("Sharing stopped: " + error.Message));
         c.Received += packet => { if (!pending.TryAdd(packet)) c.Stop("Incoming event queue filled. Sharing stopped to prevent delayed input."); };
-        c.Closed += reason => { input.ReleaseAll(); Ui(() => { if (connection == c) Reset(reason); }); };
+        c.Closed += reason => {
+            input.Stop(c.Lifetime);
+            // Never wait for SendInput's lock from a low-level hook callback.
+            // The session token prevents delayed cleanup releasing a new session's keys.
+            _=Task.Run(()=>input.ReleaseAll(c.Lifetime));
+            Ui(() => { if (connection == c) Reset(reason); });
+        };
         if (!desk) allowInput.Checked = true;
         UpdateReceiveOptions();
         incomingTimer.Start();
@@ -269,12 +224,14 @@ public sealed class MainForm : Form
                 if (receivingInput && current.PeerProtocol >= 5)
                 {
                     if (!Enum.IsDefined((DeviceSide)packet.A) || packet.B is < 0 or > 65535 || packet.C is < 0 or > 3) throw new IOException("Invalid screen layout request.");
-                    input.ConfigureRemote((DeviceSide)packet.A, packet.B, (packet.C & 1) != 0, (packet.C & 2) != 0);
+                    input.ConfigureRemote((DeviceSide)packet.A, packet.B, (packet.C & 1) != 0, (packet.C & 2) != 0,current.Lifetime);
                 }
                 current.Send(new Packet("input-ack", A: receivingInput ? 1 : 0));
                 return;
             case "input-end" when !options.Desk:
-                receivingInput = false; input.ReleaseAll(); return;
+                bool wasReceiving=receivingInput;receivingInput = false; input.ReleaseAll();
+                if(wasReceiving&&options.AllowInput)input.EndRemoteControl(true,current.Lifetime);
+                return;
             case "key" or "move" or "mouse" when !options.Desk:
                 if (receivingInput && options.AllowInput) input.Apply(packet, current.Lifetime);
                 return;
@@ -341,7 +298,7 @@ public sealed class MainForm : Form
         if (fromEdge && (!edgeSwitch.Checked || connection.PeerProtocol < 5 || !remoteInput)) return;
         if (!remoteInput) { status.Text = "On the remote PC, enable “Allow this PC to receive keyboard and mouse” first."; return; }
         bool automatic = edgeSwitch.Checked && connection.PeerProtocol >= 5;
-        try { connection.Send(new Packet("input-start", A: (int)layoutPicker.Selected, B: fraction, C: (automatic ? 1 : 0) | (fromEdge ? 2 : 0))); input.Start(); status.Text = "Keyboard and mouse control the other PC. Move back across the joining edge, or press F8, to return."; RefreshUi(); }
+        try { var current=connection;if(!current.Send(new Packet("input-start", A: (int)layoutPicker.Selected, B: fraction, C: (automatic ? 1 : 0) | (fromEdge ? 2 : 0))))return; input.Start(current.Lifetime); status.Text = "Keyboard and mouse control the other PC. Move back across the joining edge, or press F8, to return."; RefreshUi(); }
         catch (Exception e) { StopInput(); status.Text = e.Message; }
     }
     void StopInput(int? fraction = null)
@@ -377,6 +334,7 @@ public sealed class MainForm : Form
         incomingTimer.Stop();
         attempt?.Cancel(); attempt?.Dispose(); attempt = null;
         host?.Dispose(); host = null;
+        key.Clear();
         var previous = connection; connection = null; previous?.Dispose();
         inbox?.Dispose(); inbox = null;
         if (previous != null) lastSession = "Last session:\n" + previous.Diagnostics + "\nEnded: " + message;
@@ -389,6 +347,7 @@ public sealed class MainForm : Form
     }
     void RefreshUi()
     {
+        fitLayout?.Invoke();
         bool live = connection != null, busy = host != null || attempt != null;
         generate.Enabled = !live && attempt == null; join.Enabled = !live && !busy; address.Enabled = !live && !busy; key.ReadOnly = live || host != null;
         copy.Enabled = host != null && key.Text.Length == 6; disconnect.Enabled = live || busy;
@@ -399,6 +358,7 @@ public sealed class MainForm : Form
         sendAudio.Text = desk ? "Share my microphone with the other PC" : "Send this PC's sound to the first PC";
         hearAudio.Text = desk ? "Hear the other PC through my speakers" : "Receive microphone through VB-CABLE";
         hint.Text = !live ? "Connection is direct over your local network. Sharing stays off until you choose it." : desk ? "Use headphones to avoid feedback. Mic uses the Windows default recording device." : "For calls: choose a virtual cable's playback input here, then its recording output in your calling app. Normal speakers play the mic aloud.";
+        fitLayout?.Invoke();
         role.Text = live ? "Connected" : busy ? desk ? "Waiting for your other PC…" : "Connecting…" : "Ready to connect";
         if (desk)
         {

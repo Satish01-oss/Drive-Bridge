@@ -97,3 +97,11 @@ entry in Settings. Help, licenses and the driver are embedded.
 DeviceBridge.exe --self-test runs non-hardware regression checks and writes its
 result beside the executable. --inventory exports a read-only device/setup report.
 See ARCHITECTURE.md, TWO-PC-TEST.txt and SIGNING-AND-DRIVER.txt for details.
+
+ONE SHARED POINTER
+While your keyboard/mouse control the other PC, the desk pointer is hidden.
+Returning control hides the idle remote pointer until that PC’s own physical
+mouse moves. Disconnect, emergency stop and normal exit restore local pointer
+visibility. Cursor schemes and global cursor visibility counters are not changed.
+Check my setup includes a two-second pointer hiding/restore check. The actual
+cross-PC handoff still needs your physical acceptance test.

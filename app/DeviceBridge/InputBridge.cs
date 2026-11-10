@@ -10,18 +10,24 @@ public sealed class InputBridge : IDisposable
     nint keyboard, mouse;
     Point original, anchor;
     Point? lastLocalPoint;
-    bool watchEdge, edgePending, remoteEdge;
+    bool watchEdge, edgePending;
+    volatile bool remoteEdge;
     DeviceSide side, remoteSide;
     long edgeCooldown;
     readonly Dictionary<int, uint> keys = new();
     readonly HashSet<int> buttons = new();
     readonly HashSet<uint> localKeys = new();
     readonly object inputGate = new();
+    CancellationToken inputLifetime;
+    readonly object sessionGate=new();
+    CancellationToken sessionLifetime;
     HookLoop? hookLoop;
+    CursorCover? localCover, idleCover;
     public event Action<string>? Emergency;
     public event Action<int>? EdgeEntered;
     public event Action<int>? ReturnRequested;
     public bool Capturing => Volatile.Read(ref keyboard) != 0;
+    public void BeginSession(CancellationToken lifetime){lock(sessionGate)sessionLifetime=lifetime;}
     public InputBridge(Func<Packet, bool> send)
     {
         this.send = send;
@@ -38,18 +44,29 @@ public sealed class InputBridge : IDisposable
             return CallNextHookEx(0, code, message, data);
         }
     }
-    public void Start() => (hookLoop ??= new HookLoop()).Invoke(StartCore);
+    public void Start(CancellationToken lifetime=default)
+    {
+        if(lifetime.IsCancellationRequested)return;
+        (hookLoop??=new HookLoop()).Invoke(()=>{if(!lifetime.IsCancellationRequested)StartCore();});
+    }
+    internal bool PointerHidden=>localCover?.Active==true||idleCover?.Active==true;
     void StartCore()
     {
         if (Capturing) return;
         original = Cursor.Position;
         var screen = Screen.FromPoint(original).Bounds;
         anchor = new Point(screen.Left + screen.Width / 2, screen.Top + screen.Height / 2);
-        Cursor.Position = anchor;
-        keyboard = SetWindowsHookEx(13, keyboardProc, GetModuleHandle(null), 0);
-        if (mouse == 0) mouse = SetWindowsHookEx(14, mouseProc, GetModuleHandle(null), 0);
-        if (keyboard == 0 || mouse == 0) { int error = Marshal.GetLastWin32Error(); StopCore(); throw new Win32Exception(error); }
-        edgePending = false;
+        try
+        {
+            ClearIdlePointer();
+            Cursor.Position = anchor; anchor=Cursor.Position;
+            (localCover??=new CursorCover()).HideAt(anchor);
+            keyboard = SetWindowsHookEx(13, keyboardProc, GetModuleHandle(null), 0);
+            if (mouse == 0) mouse = SetWindowsHookEx(14, mouseProc, GetModuleHandle(null), 0);
+            if (keyboard == 0 || mouse == 0) throw new Win32Exception(Marshal.GetLastWin32Error());
+            localCover.Refresh();edgePending = false;
+        }
+        catch {StopCore();throw;}
     }
     public void WatchEdge(bool enabled, DeviceSide direction)
     {
@@ -66,7 +83,7 @@ public sealed class InputBridge : IDisposable
             mouse = SetWindowsHookEx(14, mouseProc, GetModuleHandle(null), 0);
             if (mouse == 0) { watchEdge = false; throw new Win32Exception(Marshal.GetLastWin32Error()); }
         }
-        else if (!enabled && !Capturing && mouse != 0) { UnhookWindowsHookEx(mouse); mouse = 0; }
+        else if (!enabled && !Capturing && idleCover?.Active!=true && mouse != 0) { UnhookWindowsHookEx(mouse); mouse = 0; }
     }
     public void StopCapture(int? returnFraction = null)
     {
@@ -74,27 +91,54 @@ public sealed class InputBridge : IDisposable
     }
     void StopCaptureCore(int? returnFraction = null)
     {
-        bool wasCapturing = Capturing;
+        bool wasCapturing = Capturing || localCover?.Active==true;
         if (keyboard != 0) UnhookWindowsHookEx(keyboard);
         keyboard = 0;
-        if (!watchEdge && mouse != 0) { UnhookWindowsHookEx(mouse); mouse = 0; }
+        localCover?.Restore();
+        if (!watchEdge && idleCover?.Active!=true && mouse != 0) { UnhookWindowsHookEx(mouse); mouse = 0; }
         localKeys.Clear();
         edgePending = false; lastLocalPoint = null; edgeCooldown = Environment.TickCount64 + 150;
         if (wasCapturing) Cursor.Position = returnFraction.HasValue ? DesktopGeometry.Entry(SystemInformation.VirtualScreen, side, returnFraction.Value, false) : original;
     }
-    public void Stop()
+    public void Stop(CancellationToken? session=null)
     {
-        hookLoop?.Invoke(StopCore); remoteEdge = false;
+        hookLoop?.Invoke(()=>{lock(sessionGate){if(!session.HasValue||session.Value==sessionLifetime)StopCore();}});
+        lock(sessionGate){if(!session.HasValue||session.Value==sessionLifetime)remoteEdge=false;}
     }
     void StopCore()
     {
-        watchEdge = false; StopCaptureCore();
+        watchEdge = false; ClearIdlePointer(); StopCaptureCore();
         if (mouse != 0) { UnhookWindowsHookEx(mouse); mouse = 0; }
     }
-    public void ConfigureRemote(DeviceSide direction, int fraction, bool enabled, bool enter)
+    public void ConfigureRemote(DeviceSide direction, int fraction, bool enabled, bool enter,CancellationToken lifetime=default)
     {
+        EndRemoteControl(false);
+        lock(inputGate)
+        {
+        if(lifetime.IsCancellationRequested)return;
         remoteSide = direction; remoteEdge = enabled;
         if (enter) Cursor.Position = DesktopGeometry.Entry(SystemInformation.VirtualScreen, direction, fraction, true);
+        }
+    }
+    public void EndRemoteControl(bool hidePointer,CancellationToken lifetime=default)
+    {
+        remoteEdge=false;
+        if(hidePointer&&lifetime.IsCancellationRequested)return;
+        if(hookLoop==null&&!hidePointer)return;
+        (hookLoop??=new HookLoop()).Invoke(()=>{
+            ClearIdlePointer();
+            if(hidePointer&&!lifetime.IsCancellationRequested)
+            {
+                if(mouse==0)mouse=SetWindowsHookEx(14,mouseProc,GetModuleHandle(null),0);
+                if(mouse==0)return;
+                (idleCover??=new CursorCover()).HideAt(Cursor.Position);
+            }
+        });
+    }
+    void ClearIdlePointer()
+    {
+        idleCover?.Restore();
+        if(!watchEdge&&!Capturing&&mouse!=0){UnhookWindowsHookEx(mouse);mouse=0;}
     }
     nint Keyboard(int code, nint message, nint data)
     {
@@ -118,6 +162,9 @@ public sealed class InputBridge : IDisposable
         int kind = (int)message;
         if (!Capturing)
         {
+            // The other PC's own physical mouse immediately makes its pointer
+            // visible again. Injected shared events never trigger this branch.
+            if(idleCover?.Active==true)ClearIdlePointer();
             if (kind == 0x200)
             {
                 var position = new Point(m.x, m.y); var previous = lastLocalPoint ?? position; lastLocalPoint = position;
@@ -131,10 +178,12 @@ public sealed class InputBridge : IDisposable
         if (kind == 0x200)
         {
             int x = m.x - anchor.X, y = m.y - anchor.Y;
-            if (x != 0 || y != 0) send(new Packet("move", A: Math.Clamp(x, -32768, 32767), B: Math.Clamp(y, -32768, 32767)));
+            if ((x != 0 || y != 0) && !send(new Packet("move", A: Math.Clamp(x, -32768, 32767), B: Math.Clamp(y, -32768, 32767)))) return 1;
+            if(!Capturing)return 1;
             // Keep the desk cursor away from screen edges while it is captured.
             // A recenter event has zero delta and is never forwarded.
             if (Cursor.Position != anchor) Cursor.Position = anchor;
+            localCover?.Refresh();
         }
         else if (kind is 0x201 or 0x202 or 0x204 or 0x205 or 0x207 or 0x208 or 0x20A or 0x20B or 0x20C or 0x20E)
             send(new Packet("mouse", A: kind, B: unchecked((short)(m.mouseData >> 16))));
@@ -142,9 +191,11 @@ public sealed class InputBridge : IDisposable
     }
     public void Apply(Packet p, CancellationToken lifetime = default)
     {
+        int? returnFraction=null;
         lock (inputGate)
         {
         if (lifetime.IsCancellationRequested) return;
+        inputLifetime=lifetime;
         if (p.Kind == "key")
         {
             if (p.A is < 1 or > 254 || p.B is < 0 or > 65535 || p.C is < 0 or > 3) throw new IOException("Invalid keyboard event.");
@@ -159,9 +210,9 @@ public sealed class InputBridge : IDisposable
             if (remoteEdge && DesktopGeometry.Crossing(bounds, position, new Point(p.A, p.B), DesktopGeometry.Opposite(remoteSide)))
             {
                 remoteEdge = false;
-                ReturnRequested?.Invoke(DesktopGeometry.Fraction(bounds, position, remoteSide)); return;
+                returnFraction=DesktopGeometry.Fraction(bounds,position,remoteSide);
             }
-            Inject(MouseInput(1, p.A, p.B));
+            else Inject(MouseInput(1, p.A, p.B));
         }
         else if (p.Kind == "mouse")
         {
@@ -172,11 +223,13 @@ public sealed class InputBridge : IDisposable
             if (button != 0) { if (p.A is 0x201 or 0x204 or 0x207 or 0x20B) buttons.Add(button); else buttons.Remove(button); }
         }
         }
+        if(returnFraction.HasValue&&!lifetime.IsCancellationRequested)ReturnRequested?.Invoke(returnFraction.Value);
     }
-    public void ReleaseAll()
+    public void ReleaseAll(CancellationToken? session=null)
     {
         lock (inputGate)
         {
+        if(session.HasValue&&session.Value!=inputLifetime)return;
         foreach (var key in keys.ToArray()) SendInput(1, new[] { new INPUT { type = 1, u = new UNION { ki = new KEYBDINPUT { vk = (ushort)key.Key, flags = 2 | key.Value } } } }, Marshal.SizeOf<INPUT>());
         foreach (var b in buttons.ToArray()) SendInput(1, new[] { MouseInput(b switch { 1 => 4, 2 => 16, 3 => 64, _ => 0x100 }, data: (uint)Math.Max(0, b - 3)) }, Marshal.SizeOf<INPUT>());
         keys.Clear(); buttons.Clear();
@@ -184,7 +237,7 @@ public sealed class InputBridge : IDisposable
     }
     static INPUT MouseInput(uint flags, int x = 0, int y = 0, uint data = 0) => new() { type = 0, u = new UNION { mi = new MOUSEINPUT { dx = x, dy = y, data = data, flags = flags } } };
     static void Inject(INPUT input) { if (SendInput(1, new[] { input }, Marshal.SizeOf<INPUT>()) != 1) throw new Win32Exception("Windows blocked remote input. Elevated apps and secure screens may not accept input."); }
-    public void Dispose() { Stop(); ReleaseAll(); hookLoop?.Dispose(); }
+    public void Dispose() { Stop(); ReleaseAll(); hookLoop?.Invoke(()=>{localCover?.Dispose();idleCover?.Dispose();});hookLoop?.Dispose(); }
     delegate nint HookProc(int code, nint message, nint data);
     [StructLayout(LayoutKind.Sequential)] struct Kbd { public uint vk, scan, flags, time; public nuint extra; }
     [StructLayout(LayoutKind.Sequential)] struct Ms { public int x, y; public uint mouseData, flags, time; public nuint extra; }

@@ -4,7 +4,8 @@ namespace DeviceBridge;
 
 internal static class AppActivation
 {
-    public static string Title => "DeviceBridge " + typeof(AppActivation).Assembly.GetName().Version?.ToString(3);
+    public static string Version => typeof(AppActivation).Assembly.GetName().Version?.ToString(3) ?? "0.8.0";
+    public static string Title => "DeviceBridge " + Version;
     public static readonly Icon Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath) ?? SystemIcons.Application;
     public static readonly uint RestoreMessage = RegisterWindowMessage("DeviceBridge.RestoreSession.v1");
     public static bool RaiseExisting()
