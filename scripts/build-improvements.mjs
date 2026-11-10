@@ -5,7 +5,7 @@ const ids=new Set();
 for(const item of data.items){
  if(ids.has(item.id))throw Error('Duplicate improvement: '+item.id);ids.add(item.id);
  for(const key of ['id','group','title','plan','acceptance','evidence'])if(typeof item[key]!=='string'||!item[key].trim())throw Error('Missing '+key);
- if(!['planned','in_progress','done','blocked'].includes(item.status))throw Error('Invalid status');
+ if(!['planned','in_progress','done','blocked','deferred'].includes(item.status))throw Error('Invalid status');
  if(item.status==='done'&&item.evidence==='Not implemented or verified yet.')throw Error('Completion requires evidence');
 }
 const template=fs.readFileSync('docs/improvements-template.html','utf8');

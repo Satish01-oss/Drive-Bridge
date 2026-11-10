@@ -1,0 +1,8 @@
+import {generateKeyPairSync,sign} from 'node:crypto';
+import {signingBytes,randomId} from './identity.mjs';
+export function identity(){const {publicKey,privateKey}=generateKeyPairSync('ed25519');const encoded=publicKey.export({format:'der',type:'spki'}).toString('base64url');return {publicKey:encoded,sign:(purpose,value)=>sign(null,signingBytes(purpose,value),privateKey).toString('base64url')};}
+export function login(broker,key=identity()){const challenge=broker.challenge(key.publicKey),session=broker.authenticate(challenge.challengeId,key.sign('auth',challenge));return {key,...session,auth:broker.authorize(session.token)};}
+export function pair(broker,host,phone,options={}){const invitation=broker.createPairing(host.auth,{permissions:['view','input','microphone'],reconnect:true,...options}),request=broker.requestPairing(phone.auth,invitation.code);return {invitation,request};}
+export function grantFor(request,expiresAt=Date.now()+86400000){return {version:1,id:randomId(),requestId:request.requestId,hostId:request.hostId,controllerId:request.controllerId,permissions:request.permissions,reconnect:request.reconnect,revision:1,expiresAt};}
+export function approve(broker,host,request,expiresAt){const grant=grantFor(request,expiresAt);return broker.approve(host.auth,request.requestId,grant,host.key.sign('grant',grant));}
+export function signal(from,to,record,{sessionId=randomId(),generation=1,seq=0,type='offer',data='test-sdp'}={}){const content={grantId:record.grant.id,from:from.deviceId,to:to.deviceId,message:{protocol:'devicebridge.remote',version:1,kind:'signal',sessionId,generation,seq,payload:{type,data}}};return {...content,signature:from.key.sign('signal',content)};}

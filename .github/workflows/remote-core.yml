@@ -28,5 +28,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-      - name: Test protocol and reconnect policy (no device access)
-        run: node --test remote/core/protocol.test.mjs remote/core/recovery.test.mjs
+      - name: Install locked signaling dependency
+        run: npm ci --ignore-scripts --no-fund --no-audit
+        working-directory: remote
+      - name: Test protocol, recovery, signed pairing and HTTP/WebSocket transport
+        run: npm test
+        working-directory: remote

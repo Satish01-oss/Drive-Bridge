@@ -2,7 +2,7 @@
   "schema": 1,
   "updated": "2026-11-10",
   "title": "DeviceBridge · Next",
-  "summary": "Only the new improvements: internet remote access, Mac support, Android/iPhone companions and trusted reconnection. The existing Windows release is tracked separately.",
+  "summary": "Current release: control a Windows PC from Android over the internet, retain local Windows sharing, and reconnect trusted devices after internet loss. Mac and iPhone are deferred. Hosting budget: zero.",
   "items": [
     {
       "id": "scope",
@@ -26,7 +26,7 @@
       "id": "interface",
       "group": "01 · Scope and foundations",
       "title": "Create the common app interface",
-      "plan": "Use shared screens for devices, modes, QR/key pairing, remote controls, permissions and session status; add native platform modules underneath.",
+      "plan": "Create matching Windows and Android screens for modes, device pairing, permissions and remote controls; retain protocol compatibility for future Apple clients.",
       "acceptance": "The same core flow works on small phone screens and Windows/Mac desktops.",
       "status": "planned",
       "evidence": "Not implemented or verified yet."
@@ -46,8 +46,8 @@
       "title": "Build the pairing and presence service",
       "plan": "Run a small authenticated HTTPS/WebSocket service for pairing, device availability and connection setup. Keep screen/audio content out of service logs.",
       "acceptance": "Two devices on different networks discover each other without opening router ports.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented a loopback Node HTTP/WebSocket broker with Ed25519 identity authentication, one-use socket tickets, peer-scoped presence and signed signaling. Real-socket tests pass. Public hosting, durable restoration and separate-network device tests remain."
     },
     {
       "id": "pair",
@@ -55,8 +55,8 @@
       "title": "Add QR codes and six-character pairing keys",
       "plan": "Use short-lived random keys, strict attempt limits, and first-time approval on the computer; exchange strong device credentials after approval.",
       "acceptance": "Expired, guessed, replayed and rejected keys cannot authorize a session.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented two-minute six-character keys, attempt limits, pending host approvals, signed permission grants and rejection of replayed/expired requests. QR UI and native client approval screens remain."
     },
     {
       "id": "trust",
@@ -64,8 +64,8 @@
       "title": "Save trusted devices and permission choices",
       "plan": "Store device keys in OS-protected storage. Separate screen viewing, input, microphone and permission to reconnect; allow revocation on the computer.",
       "acceptance": "A revoked device cannot reconnect and permissions remain scoped to the approved device.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "The service verifies host-signed grants and limits identity, permissions and expiry. Revocation immediately rejects signaling and notifies both peers. Storage is currently ephemeral; OS-protected native storage and durable recovery remain."
     },
     {
       "id": "webrtc",
@@ -145,8 +145,8 @@
       "title": "Build guided Mac permission setup",
       "plan": "Request screen/audio capture, input control and microphone access only when needed. Provide status checks and links to the correct macOS settings.",
       "acceptance": "Denied or revoked permissions produce useful guidance; no permission is silently bypassed.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-screen",
@@ -154,8 +154,8 @@
       "title": "Stream the MacBook screen",
       "plan": "Implement a native ScreenCaptureKit capture and encoding module, display selection, Retina scaling and cursor handling.",
       "acceptance": "An iPhone and an Android phone can each view the actual Mac desktop on supported macOS versions.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-input",
@@ -163,8 +163,8 @@
       "title": "Control the Mac from phone touch and keyboard",
       "plan": "Use permitted native event APIs after control permission; map Command/Option shortcuts, text, click, drag and scroll.",
       "acceptance": "Mac apps accept phone text and gestures correctly, including non-English text.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-audio",
@@ -172,8 +172,8 @@
       "title": "Hear Mac sound on the connected device",
       "plan": "Capture supported system audio and stream it to the controller, including output changes and interruption handling.",
       "acceptance": "Mac sound is heard on iPhone, Android and desktop clients.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-mic",
@@ -181,8 +181,8 @@
       "title": "Prototype and package the Mac virtual microphone",
       "plan": "Validate an Audio Server Driver Plug-in path, licensing, signing and installation. Route incoming phone microphone audio into the virtual input.",
       "acceptance": "A separate Mac calling app receives phone audio. Installation and required approvals are documented and tested.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-life",
@@ -190,8 +190,8 @@
       "title": "Keep the Mac host running with clear controls",
       "plan": "Add a menu-bar app, explicit quit/disconnect and opt-in login launch. Report sleep/lock conditions and recover supported sessions.",
       "acceptance": "Closing the window keeps the host available; quit and shutdown end it safely.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "mac-local",
@@ -199,8 +199,8 @@
       "title": "Bring local device sharing to Mac and Windows↔Mac",
       "plan": "Implement local keyboard/mouse handoff, screen positioning, pointer ownership and supported two-way audio routing. Reuse the secure pairing layer.",
       "acceptance": "Mac↔Mac and Windows↔Mac pass keyboard, mouse, speaker and microphone acceptance tests.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "android",
@@ -217,8 +217,8 @@
       "title": "Build the iPhone/iPad controller app",
       "plan": "Implement the same connection and control flow with native Apple permissions, keyboard behavior, audio session management and safe area layouts.",
       "acceptance": "A physical iPhone controls both a MacBook and a Windows PC.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "text",
@@ -253,8 +253,8 @@
       "title": "Add supported phone-screen sharing with honest limits",
       "plan": "Prototype user-approved broadcasting separately from remote computer control. Do not promise unrestricted iPhone control or system-wide phone microphone replacement.",
       "acceptance": "Each shipped phone-sharing capability is tested and unsupported actions are clearly identified.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "offline",
@@ -316,8 +316,8 @@
       "title": "Provision production hosting and relay operations",
       "plan": "Choose hosting region and costs, configure HTTPS, short-lived secrets, rate limits, retention and operational checks. No secret keys enter client code or the checklist.",
       "acceptance": "The production service has documented ownership, costs and tested availability.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Researched zero-cost hosting options and documented actual free-tier limits in remote/HOSTING.md. No paid service was created. Render deployment and a strictly zero-cost relay plan still need account setup and validation."
     },
     {
       "id": "apple-release",
@@ -325,8 +325,8 @@
       "title": "Prepare signed Mac and iOS distribution",
       "plan": "Build on a Mac, configure Apple developer identities, sign/notarize the Mac installer and distribute the iOS beta through TestFlight before store submission.",
       "acceptance": "Fresh Mac and iPhone installations succeed through the documented distribution process.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "deferred",
+      "evidence": "Deferred by your latest instruction: this release is Windows and Android only. Resume Apple and broader phone-sharing work when you request it."
     },
     {
       "id": "other-release",
@@ -350,8 +350,8 @@
       "id": "cross-tests",
       "group": "07 · Packaging, verification and release",
       "title": "Test every main controller-to-computer pairing",
-      "plan": "Test iPhone→Mac, Android→Mac, iPhone→Windows and Android→Windows, plus desktop combinations, using physical hardware on separate networks.",
-      "acceptance": "Record actual results for screen, input, audio, microphone and stop actions for each supported pairing.",
+      "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
+      "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
       "status": "planned",
       "evidence": "Not implemented or verified yet."
     },
@@ -374,5 +374,5 @@
       "evidence": "Not implemented or verified yet."
     }
   ],
-  "stage": "Connection foundation in development. Protocol and reconnect-policy tests pass locally; the new cross-platform apps, native adapters and internet service are not built yet."
+  "stage": "Connection service in development. 56 local tests pass, including real HTTP/WebSocket pairing and outage/reconnect signaling. The Windows remote host and Android app are not integrated yet."
 }
