@@ -92,7 +92,7 @@
       "plan": "Show who is connected, active permissions and a persistent stop action. Release pressed input states and stop audio when access ends.",
       "acceptance": "Stopping a session promptly ends control and media, including when a client misbehaves.",
       "status": "in_progress",
-      "evidence": "Windows remote mode shows approved devices, permissions, connection status, remove-access and tray stop/quit actions, plus an emergency shortcut. The local browser test was explicitly disconnected and its controller tab closed. Physical audio/mic cleanup, background visibility and interruption tests remain pending. Source hardening now makes native Stop pause capture and disconnect the service, requiring an explicit Reconnect before becoming available again. It is built locally but not yet included in preview 4; runtime verification and updated packaging remain pending."
+      "evidence": "Windows remote mode shows approved devices, permissions, connection status, remove-access and tray stop/quit actions, plus an emergency shortcut. The local browser test was explicitly disconnected and its controller tab closed. Physical audio/mic cleanup, background visibility and interruption tests remain pending. Source hardening now makes native Stop pause capture and disconnect the service, requiring an explicit Reconnect before becoming available again. The hardening is packaged in preview 5; physical runtime acceptance is pending."
     },
     {
       "id": "win-screen",
@@ -101,7 +101,7 @@
       "plan": "Add native screen capture, hardware encoding where supported, display selection and cursor metadata alongside the existing sharing engine.",
       "acceptance": "A phone sees the selected display smoothly with correct scaling and orientation.",
       "status": "in_progress",
-      "evidence": "The native Windows host streamed a live screen to the authorized local browser controller through the public signaling service. Video reached readyState 4 at 1280×800 (and adapted to 640×400 during a later test). This verifies the native/browser component; Android, performance and separate-network tests remain."
+      "evidence": "The native Windows host streamed a live screen to the authorized local browser controller through the public signaling service. Video reached readyState 4 at 1280×800 (and adapted to 640×400 during a later test). This verifies the native/browser component; Android, performance and separate-network tests remain. A physical Android tester now confirms the PC screen appears after a fresh pairing; native Windows also shows Connected. Network type, display performance and orientation acceptance remain pending."
     },
     {
       "id": "win-input",
@@ -209,7 +209,7 @@
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device views and controls a Windows PC; MacBook acceptance is deferred.",
       "status": "in_progress",
-      "evidence": "The user installed the signed preview 4 APK on a physical Android phone and reached its connection-key screen. Windows approval succeeded, but the phone remained waiting for its computer screen. Physical screen/input/audio acceptance is not complete; that failure is under investigation."
+      "evidence": "The physical Android preview APK installs and opens. Windows approval succeeded, and after clearing an accidentally interrupted one-session approval and pairing afresh, the user confirmed the PC screen appears on the phone. Touch/Unicode typing, audio, background and outage acceptance are being tested separately."
     },
     {
       "id": "ios",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Published source-pinned prerelease v0.9.0-preview.4 with the 84-test client fixes in both apps. Windows passed 92 checks plus clean-runner installer install/reinstall/shortcuts/uninstall; Android release APK signature is verified and 4 native contract tests pass. Public assets have verified SHA-256 digests. Physical phone installation/update acceptance remains pending. Stable Windows stays 0.8.0. The preview 4 Windows installer also completed on this PC and opened the installed remote host. The physical Android app installed and opened; remote screen acceptance remains pending."
+      "evidence": "Preview 5 Windows and Android assets are published and checksummed. Windows passes 92 checks plus isolated install/reinstall/shortcut/uninstall tests. The signed Android APK has the same release identity and version code 905 for updates. The user installed preview 4 and confirmed live screen viewing after fresh pairing; preview 5 installation and remaining physical feature acceptance are pending."
     },
     {
       "id": "regression",
@@ -353,7 +353,7 @@
       "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
       "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
       "status": "in_progress",
-      "evidence": "Physical Android test started: signed APK installation and Windows pairing/approval succeeded. An accidental disconnect interrupted the first session; a later attempt remained on Waiting for computer screen. A fresh pairing test and connection-stage diagnostics are in progress. Do not treat the screen/control/audio tests as passed."
+      "evidence": "Physical Android installation, pairing, Windows approval and live PC screen viewing are confirmed. An initial accidental disconnect was followed by a blank/waiting attempt; clearing that one-session approval and fresh pairing restored the screen. A blank Notepad tab is prepared for physical touch/Unicode typing. Audio, background and separate-network/outage checks remain pending."
     },
     {
       "id": "recovery-tests",
@@ -371,7 +371,7 @@
       "plan": "Update the website with actual platform downloads, supported features and simple setup steps. Mark features complete only after release evidence is available.",
       "acceptance": "Public links download the tested signed builds and the checklist reflects actual verified outcomes.",
       "status": "in_progress",
-      "evidence": "Public Windows + Android preview 4 downloads, supported OS targets, pairing guide and verified build details are available at remote-preview.html. Stable Windows remains 0.8.0. Full release promotion requires physical Android, separate-network, audio and recovery acceptance."
+      "evidence": "The public preview page advertises version 0.9.0 preview 5 with both verified downloads, build details, requirements and pairing/diagnostic guidance. Stable Windows remains 0.8.0. Full release promotion still requires touch/typing, audio, background, separate-network and outage acceptance."
     },
     {
       "id": "signed-broker-core",
@@ -452,7 +452,7 @@
       "plan": "Publish a source-pinned prerelease with the Windows installer, signed Android APK and SHA-256 sums. Keep stable Windows separate and provide a phone-friendly setup page.",
       "acceptance": "Public release assets match the tested source and advertised hashes; the preview page clearly states unfinished acceptance tests.",
       "status": "done",
-      "evidence": "Published v0.9.0-preview.4 from b78df59e89a046de37d00526e4a153598f699b63. GitHub Windows workflow 42850501916 passed build, 92 checks and clean installer tests; the signed APK contains the same latest client bundle. Both release assets and checksums are publicly available. The website advertises this as a preview; physical Android acceptance is still pending."
+      "evidence": "Published source-pinned preview 5 from 21804c1521cbbbfaeaa1edb5c303295f1912eca7 with the Windows installer, signed Android update (version code 905), SHA-256 sums and public download verification. Windows workflow 42862078730 passed build, 92 checks and isolated installation tests. Shared diagnostics/error/Stop coverage passes 86 tests locally. Physical screen viewing is confirmed on preview 4; preview 5 physical acceptance remains separate."
     },
     {
       "id": "android-install-acceptance",
@@ -462,7 +462,16 @@
       "acceptance": "The user confirms the Android APK installs and its connection-key screen opens.",
       "status": "done",
       "evidence": "The user confirmed the connection-key screen is open after installing the public preview 4 Android APK. Windows also displayed an approved phone. This verifies installation/launch only; the remote screen remained pending and is being fixed."
+    },
+    {
+      "id": "android-screen-acceptance",
+      "group": "07 · Packaging, verification and release",
+      "title": "Verify live Windows screen viewing on a physical Android phone",
+      "plan": "Use the public installed apps, generate a fresh short key, approve on Windows and confirm live PC screen viewing on the phone.",
+      "acceptance": "The tester sees the Windows screen on a physical Android phone and Windows reports the active connection.",
+      "status": "done",
+      "evidence": "The user confirmed The PC screen appears now after fresh pairing. The installed native Windows host also showed Connected. This verifies screen viewing for that session only; touch/typing, network type, performance, audio and outage checks remain separate."
     }
   ],
-  "stage": "Physical Android preview testing is underway. Installation and Windows approval succeeded; the computer screen remains blank/waiting and is not accepted. Native Stop hardening, preserved error messages and connection/video progress reports are being prepared for a diagnostic update. 92 Windows checks and 86 shared tests pass locally; sound, microphone and outage acceptance remain pending."
+  "stage": "Physical Android installation, pairing and live Windows screen viewing are confirmed on preview 4. Phone touch/Unicode typing is being tested in Notepad. Preview 5 is published with preserved errors, video-progress diagnostics and stronger Stop behavior; 92 Windows and 86 shared checks pass. Audio, microphone, background, separate-network and outage tests remain pending."
 }
