@@ -1,7 +1,7 @@
 {
   "version": "0.8.0",
   "updated": "2026-11-10",
-  "summary": "The refreshed GUI, background-sharing fix and native pointer-hiding check are verified. Final installer/release work is in progress. Your final two-PC acceptance checks remain below.",
+  "summary": "The installed app, refreshed GUI, background/pointer fixes and installer download are ready. The remaining tasks are your nine hands-on two-PC checks and optional publisher signing.",
   "items": [
     {
       "id": "repo",
@@ -79,16 +79,16 @@
       "id": "desktop",
       "group": "Installed Windows app",
       "title": "Install the finished app on this PC and add its desktop shortcut",
-      "done": false,
-      "revision": 1,
-      "evidence": "The older copy has been exited normally. Installation will follow the GUI refresh."
+      "done": true,
+      "revision": 2,
+      "evidence": "The final v0.8.0 app is installed on this PC. Its app hash, desktop/Start menu shortcuts and Windows uninstall registration were verified."
     },
     {
       "id": "app-ci",
       "group": "Installed Windows app",
       "title": "Pass app regression checks on the final build",
       "done": true,
-      "revision": 3,
+      "revision": 5,
       "evidence": "78 app regression checks passed locally and the final GitHub Windows build/test workflow succeeded. Physical hardware tests remain below."
     },
     {
@@ -103,17 +103,17 @@
       "id": "publish",
       "group": "Website and release",
       "title": "Publish the new installer release on GitHub",
-      "done": false,
-      "revision": 1,
-      "evidence": "Waiting for final GUI and installer validation."
+      "done": true,
+      "revision": 2,
+      "evidence": "GitHub release v0.8.0 contains DeviceBridge-Setup-0.8.0.exe and its SHA-256 checksum."
     },
     {
       "id": "site-download",
       "group": "Website and release",
       "title": "Verify the website shows the new version and downloads the installer",
-      "done": false,
-      "revision": 1,
-      "evidence": "Will be checked after the release deployment."
+      "done": true,
+      "revision": 2,
+      "evidence": "GitHub Pages deployed the release automatically. The live version, installer filename and complete reconstructed download SHA-256 were verified."
     },
     {
       "id": "second-install",

@@ -16,7 +16,7 @@ Release events use `release-website.yml` to dispatch `pages.yml` on `main`. This
 
 The Pages workflow runs when a release is published/edited/promoted/unpublished/deleted, when `main` changes, or when run manually. It checks out `main`, asks GitHub for the current latest stable release, downloads the exact versioned installer EXE, verifies size, Windows PE format (a 32-bit installer launcher is valid for the x64 app), and GitHub's SHA-256 digest when supplied. It computes a SHA-256 checksum regardless, packages same-origin download parts, updates the main and setup-guide manifests and displayed metadata, validates the complete site, then deploys.
 
-No GitHub API calls or tokens are needed in visitors' browsers. GitHub release notes are linked rather than inserted as executable HTML. Generated files exist in the Pages deployment artifact; the source checkout keeps its checked-in fallback download. The original ChatGPT-hosted website is a separate deployment and does not follow this GitHub Pages workflow.
+No GitHub API calls or tokens are needed in visitors' browsers. GitHub release notes are linked rather than inserted as executable HTML. Generated files exist in the Pages deployment artifact; the source checkout keeps its checked-in fallback download. The original ChatGPT-hosted website forwards visitors to GitHub Pages, so both public links lead to the current download.
 
 ## If a release update fails
 
