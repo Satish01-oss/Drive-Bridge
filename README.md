@@ -2,7 +2,7 @@
 
 A static, responsive download website for DeviceBridge, the Windows app for sharing a keyboard, mouse, speakers/headphones and microphone between two PCs on the same trusted network. Wi-Fi and Ethernet can be mixed.
 
-Current app: **0.7.0** · **Windows 10/11 x64** · **DeviceBridge-0.7.0.exe**.
+Windows 10/11 x64. The website follows the latest published stable GitHub Release. Before the first stable release, it serves the checked-in **0.7.0** preview.
 
 Public website: https://satish01-oss.github.io/Drive-Bridge/
 
@@ -13,9 +13,10 @@ Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 - `app/DeviceBridge/`: Windows app source, build/signing scripts, regression checks, original driver bundle and third-party notices. See [app build instructions](app/DeviceBridge/README.md).
 - `dist/`: Complete public download website, photographs, release manifests and app download data.
 - `scripts/verify-site.mjs`: Website link and EXE integrity validation.
+- `scripts/sync-github-release.mjs`: Fetches, verifies and packages the latest GitHub Release during deployment.
 - `.github/workflows/`: Automatic website publication and Windows app build/testing.
 
-Website changes publish through GitHub Pages. App changes build and test on a Windows runner and produce a downloadable test artifact. Updating app source alone does not replace the website's released executable; follow the app's release instructions to publish a reviewed new version.
+Website changes publish through GitHub Pages. App changes build and test on a Windows runner and produce a versioned EXE in the workflow artifact. **Publishing a stable GitHub Release with that EXE automatically updates the website.** See [release instructions](RELEASING.md). Updating app source alone does not release a new download.
 
 ## Hosting
 
@@ -25,15 +26,18 @@ The included GitHub Actions workflow validates the downloads and publishes `dist
 
 ## Download files
 
-Both release manifests reference the nine binary parts in `dist/downloads/`. The browser joins these parts, verifies their size and SHA-256 checksum, then saves one ordinary **DeviceBridge-0.7.0.exe**. Users never need to handle the parts. Keep all parts in order and publish them with the website; they are real binary data, not Git LFS pointers.
+The Pages workflow reads GitHub's latest stable Release, downloads its versioned Windows x64 EXE and validates its size, executable format and GitHub SHA-256 digest when available. It generates both manifests, download parts, visible version/date, and a release-notes link in the deployment artifact. It never commits generated release data back to the repository. No API tokens are exposed to website visitors.
 
-SHA-256: `2a56276df30f9cff88714213a4014345926339f0e3cb29165a61b91519e497e9`
+The browser joins the same-origin download parts, verifies their size and SHA-256 checksum, then saves one ordinary versioned EXE. Users never need to handle the parts. An incomplete or invalid new release fails validation and leaves the previously deployed website running. Drafts and prereleases are ignored. If no stable release exists, the checked-in v0.7.0 parts remain the fallback. Those are real binary data, not Git LFS pointers.
+
+Fallback 0.7.0 SHA-256: `2a56276df30f9cff88714213a4014345926339f0e3cb29165a61b91519e497e9`
 
 Run the same checks locally with Node.js 22 or newer:
 
 ```sh
 node scripts/verify-site.mjs
 node --check dist/app.js
+node --test scripts/sync-github-release.test.mjs
 ```
 
 To preview, serve `dist/` through a local HTTP server. HTTPS (or localhost) is required for the browser's integrity check; opening `index.html` directly as a file is not supported.

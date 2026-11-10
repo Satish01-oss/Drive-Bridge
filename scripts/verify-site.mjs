@@ -25,6 +25,13 @@ for (const name of ['release.json', 'test-release.json']) {
 for (const name of ['index.html', 'test.html', 'credits.html']) {
   const path = resolve(root, name);
   const html = (await localFile(path)).toString();
+  if (name !== 'credits.html') {
+    const manifest = JSON.parse(await localFile(resolve(root, name === 'test.html' ? 'test-release.json' : 'release.json')));
+    const versions = [...html.matchAll(/data-release-version>([^<]*)</g)].map(m => m[1]);
+    if (!versions.length || versions.some(v => v !== manifest.version)) throw new Error(`${name}: visible versions differ from the download`);
+    const filenames = [...html.matchAll(/data-release-filename>([^<]*)</g)].map(m => m[1]);
+    if (filenames.some(f => f !== manifest.filename)) throw new Error(`${name}: filename differs from the download`);
+  }
   for (const [, link] of html.matchAll(/(?:href|src)="([^"]+)"/g)) {
     if (/^(?:https?:|#|mailto:|data:)/.test(link)) continue;
     if (link.startsWith('/')) throw new Error(`${name}: root-relative link breaks project hosting: ${link}`);

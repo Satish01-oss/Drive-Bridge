@@ -3,6 +3,8 @@ name: Verify and publish website
 on:
   push:
     branches: [main]
+  release:
+    types: [published, edited, released, unpublished, deleted]
   workflow_dispatch:
 
 permissions:
@@ -17,9 +19,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
+        with:
+          ref: main
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Test release synchronization
+        run: node --test scripts/sync-github-release.test.mjs
+      - name: Prepare the latest published Windows release
+        run: node scripts/sync-github-release.mjs
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: Check download integrity and website links
         run: node scripts/verify-site.mjs
       - name: Check JavaScript syntax

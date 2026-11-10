@@ -26,15 +26,15 @@ if ($process.ExitCode -ne 0) { throw 'Regression checks failed' }
 
 The checks exercise local secure pairing, reconnect, packet transport, input geometry, audio buffering and window lifetime. They do not install a driver, send input to another PC, or verify physical audio devices. Test actual device sharing using `TWO-PC-TEST.txt`. The user reported keyboard, mouse, speakers/headphones and microphone working with v0.7.0 between a Wi-Fi PC and Ethernet PC on the same router.
 
-GitHub Actions runs the Windows build and regression checks for app changes. The workflow's artifact contains the unsigned self-contained test build and its test report; it does not automatically replace the public website download.
+GitHub Actions runs the Windows build and regression checks for app changes. Its artifact contains a versioned self-contained EXE, checksum and test report. Builds remain unsigned until a trusted signing step is performed. Publishing the versioned EXE in a stable GitHub Release updates the public website automatically.
 
 ## Update and release
 
 1. Edit the app here and update `<Version>` in `DeviceBridge.csproj` for a new release.
 2. Build with `-Portable`, run regression checks and test on two Windows PCs.
 3. If a trusted publisher certificate is available, sign the executable with `Sign-Release.ps1 -CertificateThumbprint <thumbprint>`. The default target is `portable/DeviceBridge.exe`. Keep private keys and certificates out of Git.
-4. Package that final executable into the website's `dist/downloads/` parts. Update both release manifests with its version, filename, byte count, ordered parts and SHA-256. Update the visible fallback version, release date and changes in the HTML too. Signing changes the checksum.
-5. Run `node scripts/verify-site.mjs` from the repository root, commit the source and release assets, then push. Pages publishes the website automatically.
+4. Save the final EXE as `DeviceBridge-<version>.exe` (for example `DeviceBridge-0.8.0.exe`). The Windows workflow produces this versioned filename automatically. If you sign it, sign the final file before uploading it; signing changes its checksum.
+5. Publish a normal GitHub Release tagged `v<version>` with that EXE attached. Pages automatically packages and verifies it, updates both downloads and the visible website version, and deploys. There is no need to edit the website manifests or split the EXE manually. See [release instructions](../../RELEASING.md).
 
 The original embedded archive must remain unchanged: `vendor/VBCABLE_Driver_Pack46.zip`, SHA-256 `bc44e8974191a5a2427d6c979e2dab08dbb09925f3f435dfa2f0ba3e45b6eb90`. The app checks this hash before exposing its installer.
 

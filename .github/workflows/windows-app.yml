@@ -36,12 +36,23 @@ jobs:
           $report = Join-Path (Split-Path $exe) 'self-test-result.txt'
           if (Test-Path -LiteralPath $report) { Get-Content -LiteralPath $report }
           if ($process.ExitCode -ne 0) { throw "Regression checks failed: $($process.ExitCode)" }
+      - name: Prepare versioned release asset
+        run: |
+          [xml]$project = Get-Content app/DeviceBridge/DeviceBridge.csproj
+          $version = [string]$project.Project.PropertyGroup.Version
+          if ($version -notmatch '^\d+\.\d+\.\d+$') { throw 'A three-part release version is required' }
+          $filename = "DeviceBridge-$version.exe"
+          $destination = Join-Path 'app/DeviceBridge/portable' $filename
+          Copy-Item -LiteralPath app/DeviceBridge/portable/DeviceBridge.exe -Destination $destination
+          $hash = (Get-FileHash -LiteralPath $destination -Algorithm SHA256).Hash.ToLowerInvariant()
+          "$hash  $filename" | Set-Content -LiteralPath app/DeviceBridge/portable/SHA256.txt -Encoding utf8
       - name: Upload Windows test build and results
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: DeviceBridge-Windows-x64-${{ github.sha }}
           path: |
-            app/DeviceBridge/portable/DeviceBridge.exe
+            app/DeviceBridge/portable/DeviceBridge-*.exe
+            app/DeviceBridge/portable/SHA256.txt
             app/DeviceBridge/portable/self-test-result.txt
           if-no-files-found: warn
