@@ -3,6 +3,7 @@ name: Refresh website after a release
 on:
   release:
     types: [published, edited, released, unpublished, deleted]
+  workflow_dispatch:
 
 permissions:
   contents: read
