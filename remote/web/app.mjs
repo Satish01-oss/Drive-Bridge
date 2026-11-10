@@ -8,7 +8,7 @@ let client,role,peer,wanted=false,pageActive=true,retryTimer,retries=0,autoGrant
 const promptTimers=new Map();
 const status=text=>{el('status').textContent=text;};
 const friendlyError=error=>({'pairing-unavailable':'That key expired or could not be found. Generate a new key on the PC and try again.','request-unavailable':'This request expired or the connection service restarted. Generate a fresh key and reconnect.','pairing-busy':'This computer has several pending requests. Try a fresh key.','rate-limited':'Too many attempts. Wait a minute, then try a fresh key.','unauthorized':'The service connection expired. Reconnecting…'}[error.message]||error.message);
-const run=action=>async event=>{event?.preventDefault();const button=event?.currentTarget?.tagName==='BUTTON'?event.currentTarget:null;if(button)button.disabled=true;try{await action();}catch(error){if(error.name!=='AbortError')status(friendlyError(error));}finally{if(button)button.disabled=false;}};
+const run=action=>async event=>{event?.preventDefault();const button=event?.currentTarget?.tagName==='BUTTON'?event.currentTarget:null;if(button)button.disabled=true;try{await action();}catch(error){if(error.name!=='AbortError')status(friendlyError(error));}finally{if(button)button.disabled=['pair','generate-key'].includes(button.id)?!client?.connected:false;}};
 function clearPrompts(){for(const timer of promptTimers.values())clearTimeout(timer);promptTimers.clear();el('approvals').replaceChildren();}
 function rpc(type,payload={}){if(!native)return Promise.reject(Error('Open this in the installed Windows app.'));const rpcId=crypto.randomUUID();return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{pending.delete(rpcId);reject(Error('The Windows app did not respond.'));},15000);pending.set(rpcId,{resolve,reject,timeout});native.postMessage({rpcId,type,...payload});});}
 native?.addEventListener('message',event=>{const m=event.data;if(m.rpcId&&pending.has(m.rpcId)){const p=pending.get(m.rpcId);pending.delete(m.rpcId);clearTimeout(p.timeout);m.error?p.reject(Error(m.error)):p.resolve(m.result);}else if(['frame','sound','mic-ack'].includes(m.type)){const resource=resourcesReady.get(m.captureId);if(resource)resource.handle(m).catch(error=>status(error.message));else if(m.type!=='mic-ack')native.postMessage({type:m.type==='frame'?'frame.ack':'sound.ack',captureId:m.captureId});}else if(m.type==='native-error')status(m.message);else if(m.type==='capture-error'){peer?.close('transport-failed');status(m.message);}else if(m.type==='native-stop'){autoGrant=null;peer?.close('user');status('Sharing stopped on this computer.');}});
@@ -63,6 +63,9 @@ async function acquireHost(grant){
 }
 function onClient(event){
  if(event.type==='status'){
+  if(event.status==='connecting-service'){status('Connecting to DeviceBridge… The first connection may take a minute.');el('native-reconnect').hidden=!native;el('native-reconnect').disabled=true;el('pair').disabled=true;el('generate-key').disabled=true;}
+  if(event.status==='service-connected'){el('native-reconnect').hidden=true;el('pair').disabled=false;el('generate-key').disabled=false;}
+  if(event.status==='service-offline'||event.status==='stopped'){el('native-reconnect').hidden=!native;el('native-reconnect').disabled=false;el('pair').disabled=true;el('generate-key').disabled=true;}
   if(event.status==='service-connected'){clearTimeout(retryTimer);retries=0;el('mode').hidden=!!native;if(native){role=windowsNative?'host':'controller';el('host').hidden=role!=='host';el('phone').hidden=role!=='controller';el('setup').hidden=true;showDevices();}el('connect-service').disabled=false;el('stop-all').hidden=false;status(peer?.ready?'Connected — your computer is ready.':native?(role==='host'?'Ready — generate a key for your phone.':'Ready — enter the key from your computer.'):'Connected to the connection service. Choose a mode.');if(autoGrant)scheduleRemote();}
   if(event.status==='service-offline'&&wanted){clearPrompts();status(peer?.ready?'Connected — restoring the connection service…':'Connection service unavailable — retrying…');clearTimeout(retryTimer);retryTimer=setTimeout(()=>client.start().catch(()=>{}),Math.min(30000,1000*2**Math.min(retries++,5)));}
  }
@@ -105,6 +108,7 @@ window.addEventListener('devicebridge-pause',()=>{pageActive=false;clearTimeout(
 window.addEventListener('devicebridge-resume',()=>{pageActive=true;if(wanted&&!client?.connected)client?.start().catch(error=>status(error.message));if(autoGrant)scheduleRemote();});
 try{el('service').value=localStorage.getItem('devicebridge-service')||(native?'https://devicebridge-signaling-preview.onrender.com':(/^https?:$/.test(location.protocol)?location.origin:''));}catch{}buttons();
 
-if(native)el('connect-service').click();
+el('native-reconnect').onclick=()=>el('connect-service').click();
+if(native){el('setup').hidden=true;el('connect-service').click();}
 
 el('setup-mic').hidden=!windowsNative;el('setup-mic').onclick=run(()=>rpc('driver.setup'));

@@ -2,7 +2,7 @@ import {createIdentity,identityId,signValue,verifyValue,canonical,toBase64Url} f
 import {PERMISSIONS,validateMessage} from '../core/protocol.mjs';
 const id=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 export class ConnectionClient{
- #base;#store;#fetch;#WebSocket;#identity;#identityProvider;#deviceId;#token;#socket;#generation=0;#stopper=null;#starting=null;#queue=Promise.resolve();#heartbeat;#listeners=new Set();#requests=new Map();#grants=new Map();#sessions=new Map();
+ #base;#store;#fetch;#WebSocket;#identity;#identityProvider;#deviceId;#token;#socket;#generation=0;#stopper=null;#starting=null;#queue=Promise.resolve();#heartbeat;#listeners=new Set();#requests=new Map();#grants=new Map();#sessions=new Map();#revoked=new Set();#pairingOperation=null;
  constructor({baseUrl,store,identityProvider=null,fetchImpl=fetch,WebSocketImpl=WebSocket}){
   const u=new URL(baseUrl);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)))throw Error('HTTPS required');if(u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Expected service origin');
   this.#base=u.origin;this.#store=store;this.#identityProvider=identityProvider;this.#fetch=fetchImpl.bind(globalThis);this.#WebSocket=WebSocketImpl;
@@ -12,6 +12,8 @@ export class ConnectionClient{
  get grants(){return [...this.#grants.values()].map(r=>structuredClone(r));}
  subscribe(listener){this.#listeners.add(listener);return()=>this.#listeners.delete(listener);}
  #emit(event){for(const listener of [...this.#listeners])try{listener(event);}catch{}}
+ #current(generation){if(generation!==this.#generation)throw new DOMException('Connection cancelled','AbortError');}
+ #trusted(record,generation){this.#current(generation);const saved=this.#grants.get(record.grant.id);if(this.#revoked.has(record.grant.id)||!saved||canonical(saved.grant)!==canonical(record.grant)||record.grant.expiresAt<=Date.now())throw Error('Approval expired or was removed');}
  async #post(path,body){return this.#http(path,body);}
  async #sign(purpose,value){return this.#identityProvider?this.#identityProvider.sign(purpose,value):signValue(this.#identity,purpose,value);}
  async #http(path,body){
@@ -21,9 +23,9 @@ export class ConnectionClient{
  }
  async #knownGrant(record){
   const g=record?.grant;if(!g||g.version!==1||!Number.isSafeInteger(g.revision)||g.revision<1||!Number.isSafeInteger(g.expiresAt)||g.expiresAt<=Date.now()||![g.hostId,g.controllerId].includes(this.#deviceId)||!Array.isArray(g.permissions)||!g.permissions.includes('view')||new Set(g.permissions).size!==g.permissions.length||g.permissions.some(p=>!PERMISSIONS.includes(p))||typeof g.reconnect!=='boolean')throw Error('Invalid host grant');
-  if(await identityId(record.hostKey)!==g.hostId||await identityId(record.controllerKey)!==g.controllerId||!await verifyValue(record.hostKey,'grant',g,record.signature))throw Error('Host grant signature mismatch');return record;
+  if(await identityId(record.hostKey)!==g.hostId||await identityId(record.controllerKey)!==g.controllerId||!await verifyValue(record.hostKey,'grant',g,record.signature))throw Error('Host grant signature mismatch');if(g.expiresAt<=Date.now())throw Error('Approval expired');return record;
  }
- async #saveGrant(record){await this.#knownGrant(record);this.#grants.set(record.grant.id,structuredClone(record));await this.#store.set('grants',this.grants);}
+ async #saveGrant(record,generation=this.#generation){await this.#knownGrant(record);this.#current(generation);if(this.#revoked.has(record.grant.id))throw Error('Approval was removed');this.#grants.set(record.grant.id,structuredClone(record));await this.#store.set('grants',this.grants);if(this.#revoked.has(record.grant.id)){await this.#store.set('grants',this.grants);throw Error('Approval was removed');}this.#current(generation);}
  async start(){
   if(this.#starting)return this.#starting;if(this.connected)return;
   const generation=++this.#generation;this.#stopper=new AbortController();
@@ -46,7 +48,7 @@ export class ConnectionClient{
     ws.addEventListener('message',event=>{this.#queue=this.#queue.then(async()=>{
      if(generation!==this.#generation||this.#socket!==ws)return;
      const data=JSON.parse(event.data);if(data.type==='ready'){if(data.deviceId!==this.#deviceId)throw Error('Socket identity mismatch');clearTimeout(timeout);resolve();return;}
-     await this.#process(data);
+     await this.#process(data,generation);
     }).catch(error=>{if(generation===this.#generation)this.#emit({type:'error',message:error.message});});});
    });current();
    this.#heartbeat=setInterval(()=>{if(this.connected)this.#socket.send(JSON.stringify({type:'heartbeat'}));},20000);this.#heartbeat.unref?.();
@@ -57,23 +59,25 @@ export class ConnectionClient{
   })().catch(error=>{if(generation===this.#generation){clearInterval(this.#heartbeat);this.#socket?.close();this.#emit({type:'status',status:'service-offline'});}throw error;}).finally(()=>{if(generation===this.#generation)this.#starting=null;});
   return this.#starting;
  }
- async #process(event){
-  if(event.type==='pairing-request'){this.#requests.set(event.request.requestId,event.request);this.#emit(event);return;}
+ async #process(event,generation){
+  const emit=()=>{this.#current(generation);this.#emit(event);};this.#current(generation);
+  if(event.type==='pairing-request'){this.#requests.set(event.request.requestId,event.request);emit();return;}
   if(event.type==='grant-approved'){
-   const request=this.#requests.get(event.record?.grant?.requestId);if(!request||request.hostKey!==event.record.hostKey||request.controllerKey!==event.record.controllerKey)throw Error('Unrequested grant rejected');
-   await this.#saveGrant(event.record);this.#emit(event);return;
+   let request=this.#requests.get(event.record?.grant?.requestId);
+   if(!request&&this.#pairingOperation){try{await this.#pairingOperation;}catch{}this.#current(generation);request=this.#requests.get(event.record?.grant?.requestId);}if(!request||request.hostKey!==event.record.hostKey||request.controllerKey!==event.record.controllerKey)throw Error('Unrequested grant rejected');
+   await this.#saveGrant(event.record,generation);emit();return;
   }
-  if(event.type==='grant-revoked'){this.#grants.delete(event.grantId);this.#sessions.delete(event.grantId);await this.#store.set('grants',this.grants);this.#emit(event);return;}
+  if(event.type==='grant-revoked'){this.#revoked.add(event.grantId);this.#grants.delete(event.grantId);this.#sessions.delete(event.grantId);await this.#store.set('grants',this.grants);emit();return;}
   if(event.type==='grant-restored'){
-   const saved=this.#grants.get(event.record?.grant?.id);if(!saved||canonical(saved.grant)!==canonical(event.record.grant))throw Error('Unknown restored grant');await this.#knownGrant(event.record);this.#emit(event);return;
+   const saved=this.#grants.get(event.record?.grant?.id);if(!saved||canonical(saved.grant)!==canonical(event.record.grant))throw Error('Unknown restored grant');await this.#knownGrant(event.record);emit();return;
   }
   if(event.type==='signal'){
    const signed=event.signed,record=this.#grants.get(signed?.grantId);if(!record)throw Error('Untrusted signal');await this.#knownGrant(record);
    const {signature,...content}=signed,g=record.grant,peer=this.#deviceId===g.hostId?g.controllerId:g.hostId,key=peer===g.hostId?record.hostKey:record.controllerKey;
    if(content.to!==this.#deviceId||content.from!==peer||!await verifyValue(key,'signal',content,signature))throw Error('Signal identity mismatch');validateMessage(content.message);if(content.message.kind!=='signal')throw Error('Invalid signaling payload');
-   this.#acceptSignal(g,content.message,content.from);this.#emit(event);return;
+   this.#trusted(record,generation);this.#acceptSignal(g,content.message,content.from);emit();return;
   }
-  if(['presence','pairing-rejected','error','heartbeat-ack','signal-accepted'].includes(event.type))this.#emit(event);
+  if(['presence','pairing-rejected','error','heartbeat-ack','signal-accepted'].includes(event.type))emit();
  }
  #acceptSignal(grant,message,from){
   let state=this.#sessions.get(grant.id);
@@ -84,18 +88,22 @@ export class ConnectionClient{
   if(message.seq<=(state.last.get(from)??-1))throw Error('Replayed signal');state.last.set(from,message.seq);
  }
  async createPairing({permissions=['view','input'],reconnect=false}={}){return this.#post('/v1/pairings',{permissions,reconnect});}
- async requestPairing(code){const request=await this.#post('/v1/requests',{code:code.trim().toUpperCase()});this.#requests.set(request.requestId,request);return request;}
+ async requestPairing(code){
+  if(this.#pairingOperation)throw Error('A pairing request is already waiting');const generation=this.#generation;
+  const operation=this.#post('/v1/requests',{code:code.trim().toUpperCase()}).then(request=>{this.#current(generation);this.#requests.set(request.requestId,request);return request;});this.#pairingOperation=operation;
+  try{return await operation;}finally{if(this.#pairingOperation===operation)this.#pairingOperation=null;}
+ }
  async approveRequest(request,{permissions=request.permissions,reconnect=request.reconnect,expiresAt=Date.now()+86400000}={}){
-  if(request.hostId!==this.#deviceId)throw Error('This computer cannot approve that request');
+  const generation=this.#generation;if(request.hostId!==this.#deviceId)throw Error('This computer cannot approve that request');
   this.#requests.set(request.requestId,request);const grant={version:1,id:id(),requestId:request.requestId,hostId:request.hostId,controllerId:request.controllerId,permissions,reconnect,revision:1,expiresAt};
-  const record=await this.#post('/v1/requests/'+request.requestId+'/approve',{grant,signature:await this.#sign('grant',grant)});await this.#saveGrant(record);return record;
+  const signature=await this.#sign('grant',grant);this.#current(generation);const record=await this.#post('/v1/requests/'+request.requestId+'/approve',{grant,signature});await this.#saveGrant(record,generation);return record;
  }
  async rejectRequest(requestId){return this.#post('/v1/requests/'+requestId+'/reject',{});}
- async revoke(grantId){this.#grants.delete(grantId);this.#sessions.delete(grantId);await this.#store.set('grants',this.grants);this.#emit({type:'grant-revoked',grantId});await this.#post('/v1/grants/'+grantId+'/revoke',{});}
+ async revoke(grantId){this.#revoked.add(grantId);this.#grants.delete(grantId);this.#sessions.delete(grantId);await this.#store.set('grants',this.grants);this.#emit({type:'grant-revoked',grantId});await this.#post('/v1/grants/'+grantId+'/revoke',{});}
  async sendSignal(grantId,message){
-  const record=this.#grants.get(grantId);if(!record||!this.connected)throw Error('No active trusted connection');await this.#knownGrant(record);validateMessage(message);if(message.kind!=='signal')throw Error('Invalid signal');
+  const generation=this.#generation,record=this.#grants.get(grantId);if(!record||!this.connected)throw Error('No active trusted connection');await this.#knownGrant(record);this.#trusted(record,generation);validateMessage(message);if(message.kind!=='signal')throw Error('Invalid signal');
   const g=record.grant,content={grantId,from:this.#deviceId,to:this.#deviceId===g.hostId?g.controllerId:g.hostId,message};
-  this.#acceptSignal(g,message,this.#deviceId);const signature=await this.#sign('signal',content);if(!this.connected)throw Error('Service disconnected');this.#socket.send(JSON.stringify({type:'signal',signed:{...content,signature}}));
+  this.#acceptSignal(g,message,this.#deviceId);const signature=await this.#sign('signal',content);this.#trusted(record,generation);if(!this.connected)throw Error('Service disconnected');this.#socket.send(JSON.stringify({type:'signal',signed:{...content,signature}}));
  }
- stop(){this.#generation++;this.#starting=null;this.#stopper?.abort();clearInterval(this.#heartbeat);this.#socket?.close();this.#socket=null;this.#token=null;this.#emit({type:'status',status:'stopped'});}
+ stop(){this.#generation++;this.#starting=null;this.#pairingOperation=null;this.#stopper?.abort();clearInterval(this.#heartbeat);this.#socket?.close();this.#socket=null;this.#token=null;this.#emit({type:'status',status:'stopped'});}
 }

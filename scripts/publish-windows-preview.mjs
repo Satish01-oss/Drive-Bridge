@@ -14,11 +14,11 @@ const version=fs.readFileSync('app/DeviceBridge/DeviceBridge.csproj','utf8').mat
 if(!tag.startsWith('v'+version+'-preview.'))throw Error('Preview tag and Windows version differ.');
 const token=process.env.GH_TOKEN;if(!token)throw Error('Workflow upload token is missing.');
 const headers={Accept:'application/vnd.github+json',Authorization:'Bearer '+token,'X-GitHub-Api-Version':'2022-11-28','User-Agent':'DeviceBridge-preview-CI'};
-async function api(route,method='GET',body){const response=await fetch('https://api.github.com/repos/'+repository+'/'+route,{method,headers,body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(30000)});const value=await response.json();if(!response.ok)throw Error('GitHub request failed: '+response.status+' '+(value.message||''));return value;}
+async function api(route){const response=await fetch('https://api.github.com/repos/'+repository+'/'+route,{headers,cache:'no-store',signal:AbortSignal.timeout(30000)});const raw=await response.text();if(!response.ok)throw Error('GitHub GET '+route+' failed: '+response.status);if(!raw)throw Error('GitHub GET '+route+' returned an empty response: '+response.status);return JSON.parse(raw);}
 // An unpublished draft need not have a Git tag yet. Find it in the authenticated
 // release listing instead of the published-release-by-tag endpoint.
 let release=(await api('releases?per_page=100')).find(item=>item.tag_name===tag);
-if(!release)release=await api('releases','POST',{tag_name:tag,target_commitish:source,name:'DeviceBridge '+version+' '+tag.split('-').slice(1).join('-'),body:'Unpublished test preview. Source: '+source+'. Windows build and installer checks passed. Android upload and final publication are separate steps.',draft:true,prerelease:true,make_latest:'false'});
+if(!release)throw Error('The pre-created preview draft was not found. Preserve its explicit tag name when updating its target commit.');
 if(!release.draft||!release.prerelease||release.target_commitish!==source)throw Error('An unpublished preview draft for this exact commit must already exist.');
 const filename='DeviceBridge-Setup-'+version+'.exe',directory='app/DeviceBridge/installer-output',file=path.join(directory,filename),bytes=fs.readFileSync(file);
 if(bytes.length<20*1024*1024||bytes.length>512*1024*1024||bytes.toString('ascii',0,2)!=='MZ')throw Error('Invalid Windows installer.');

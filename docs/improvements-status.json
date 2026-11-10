@@ -29,7 +29,7 @@
       "plan": "Create matching Windows and Android screens for modes, device pairing, permissions and remote controls; retain protocol compatibility for future Apple clients.",
       "acceptance": "The same core flow works on small phone screens and Windows/Mac desktops.",
       "status": "in_progress",
-      "evidence": "Implemented shared Windows/Android pairing, host approval and phone controls. The Windows app auto-connects to the service. A local controller preview connected after host approval; phone-size layout and physical Android usability still need acceptance. Moved approval above the key/options, added expiry messages and a Windows tray notification that restores the approval window."
+      "evidence": "Implemented shared Windows/Android pairing, host approval and phone controls. The Windows app auto-connects to the service. A local controller preview connected after host approval; phone-size layout and physical Android usability still need acceptance. Moved approval above the key/options, added expiry messages and a Windows tray notification that restores the approval window. Installed Windows/Android apps now hide the service-address field from initial launch, show a first-connection loading message and offer a simple Reconnect button."
     },
     {
       "id": "matrix",
@@ -56,7 +56,7 @@
       "plan": "Use short-lived random keys, strict attempt limits, and first-time approval on the computer; exchange strong device credentials after approval.",
       "acceptance": "Expired, guessed, replayed and rejected keys cannot authorize a session.",
       "status": "in_progress",
-      "evidence": "Six-character keys expire in two minutes; accepted requests allow five minutes for explicit host approval. Replacement keys invalidate older requests. Native Windows approval worked in the authorized local test. The approval area now appears above key/options and notifies/restores the Windows window. Expiry/guess/replay rejection is tested; QR pairing remains unfinished."
+      "evidence": "Six-character keys expire in two minutes; accepted requests allow five minutes for explicit host approval. Replacement keys invalidate older requests. Native Windows approval worked in the authorized local test. The approval area now appears above key/options and notifies/restores the Windows window. Expiry/guess/replay rejection is tested; QR pairing remains unfinished. Pairing now safely waits for its matching HTTP response if host approval arrives first, preventing a valid fast approval from being discarded."
     },
     {
       "id": "trust",
@@ -299,7 +299,7 @@
       "plan": "Release pressed keys/buttons, restore cursor ownership, reset audio buffers and establish a clean stream on reconnect. Require fresh mic consent if needed.",
       "acceptance": "Interrupt a session during a drag, key press and microphone use; no stuck state or old audio survives.",
       "status": "in_progress",
-      "evidence": "Windows text is now queued asynchronously with a cancellation lifetime; stop clears pending text and releases pressed keys/buttons. The actual local test stopped a long message after its STOP prefix and the character count remained unchanged afterward. Automated queue ordering, cancellation and new-session isolation checks pass. Physical phone drag/key/audio/mic interruption tests remain pending."
+      "evidence": "Windows text is now queued asynchronously with a cancellation lifetime; stop clears pending text and releases pressed keys/buttons. The actual local test stopped a long message after its STOP prefix and the character count remained unchanged afterward. Automated queue ordering, cancellation and new-session isolation checks pass. Physical phone drag/key/audio/mic interruption tests remain pending. Added generation guards across asynchronous signature checks and trust-store writes: a stopped client cannot emit a late approval or signal. Revocation is rechecked before delivery; four new race/order checks pass."
     },
     {
       "id": "restart",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Windows preview installer with the Microsoft offline runtime passed GitHub build/install/reinstall/shortcut/uninstall checks (run 42830951463). Android companion build and four native contract tests now pass GitHub CI (run 42832703946). The release APK is signed and verified locally. The preview download upload is in progress; physical phone and Unicode acceptance remain pending."
+      "evidence": "The fixed Windows app and offline-runtime installer passed isolated GitHub build/regression/install/reinstall/shortcut/uninstall checks. Android release signing and native unit checks pass locally and in CI. A draft-tag handoff error prevented the preview uploader from finding a retargeted draft; publication is being retried with an explicitly preserved tag. New 84-test client bundle fixes must be included in both final installers before publication. Physical phone acceptance remains pending."
     },
     {
       "id": "regression",
@@ -380,7 +380,7 @@
       "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
       "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
       "status": "done",
-      "evidence": "80 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The prior suite passed Windows, macOS and Linux CI. Covers actual broker restart recovery, durable failed-network revocation, signed/replay-gated signaling, full Unicode peer payloads and cleanup/backpressure cases. Physical internet/Android acceptance remains in the parent tasks."
+      "evidence": "84 shared/service/protocol/recovery/peer/audio-buffer tests pass locally. The prior 80-test suite passed Windows, macOS and Linux CI. New tests reproduce and fix delayed approvals/signals after Stop, revocation during verification and approval arriving before its pairing HTTP response. Actual broker restart recovery, failed-network revocation and permission/replay gating remain covered. Physical internet/Android acceptance remains in the parent tasks."
     },
     {
       "id": "native-protected-identity",
@@ -446,5 +446,5 @@
       "evidence": "Actual local preview test received a fresh BACKGROUND STREAM CHECK image after minimize. X preserved Connected status. Fixed remote-title lookup and RestoreSession handling, then verified normal relaunch brought back the same remote window while still connected. The controller was disconnected and all temporary test grants were removed afterward. Startup-at-sign-in remains separate and unfinished."
     }
   ],
-  "stage": "Windows + Android preview: Unicode typing, queued-message ordering, disconnect cancellation, and minimize/X/reopen now pass local runtime tests. 92 Windows checks, 80 shared/service tests and 4 Android contract tests pass locally. Physical Android, separate-network, audio and outage acceptance remain unfinished. The large Windows preview upload is moving to GitHub CI after local uploads timed out."
+  "stage": "Windows + Android preview: multilingual/queued typing, stop cancellation and minimize/X/reopen pass local runtime tests. 92 Windows checks, 84 shared/service tests and 4 Android contract tests pass locally. Late-approval/signal races after Stop are fixed. Final preview packaging/publication and physical Android, separate-network, audio and outage acceptance remain unfinished."
 }
