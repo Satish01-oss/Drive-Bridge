@@ -3,8 +3,6 @@ name: Verify and publish website
 on:
   push:
     branches: [main]
-  release:
-    types: [published, edited, released, unpublished, deleted]
   workflow_dispatch:
 
 permissions:

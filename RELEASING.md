@@ -12,6 +12,8 @@ Do not attach the workflow artifact ZIP instead of the EXE. Website visitors sti
 
 ## What happens automatically
 
+Release events use `release-website.yml` to dispatch `pages.yml` on `main`. This keeps publication on the branch allowed by the standard `github-pages` environment, rather than attempting to deploy directly from the release tag. The relay has only repository read and workflow-dispatch permissions. Pages still validates the current latest release before deploying.
+
 The Pages workflow runs when a release is published/edited/promoted/unpublished/deleted, when `main` changes, or when run manually. It checks out `main`, asks GitHub for the current latest stable release, downloads the exact versioned installer EXE, verifies size, Windows PE format (a 32-bit installer launcher is valid for the x64 app), and GitHub's SHA-256 digest when supplied. It computes a SHA-256 checksum regardless, packages same-origin download parts, updates the main and setup-guide manifests and displayed metadata, validates the complete site, then deploys.
 
 No GitHub API calls or tokens are needed in visitors' browsers. GitHub release notes are linked rather than inserted as executable HTML. Generated files exist in the Pages deployment artifact; the source checkout keeps its checked-in fallback download. The original ChatGPT-hosted website is a separate deployment and does not follow this GitHub Pages workflow.

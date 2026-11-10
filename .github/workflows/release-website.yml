@@ -1,0 +1,32 @@
+name: Refresh website after a release
+
+on:
+  release:
+    types: [published, edited, released, unpublished, deleted]
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Request website publication from main
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          node --input-type=module <<'JS'
+          const response = await fetch('https://api.github.com/repos/Satish01-oss/Drive-Bridge/actions/workflows/pages.yml/dispatches', {
+            method: 'POST',
+            headers: {
+              Accept: 'application/vnd.github+json',
+              Authorization: `Bearer ${process.env.GH_TOKEN}`,
+              'X-GitHub-Api-Version': '2022-11-28',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ref: 'main'})
+          });
+          if (response.status !== 204) throw new Error(`Website refresh request failed: HTTP ${response.status}`);
+          console.log('Requested latest-release website publication from main.');
+          JS

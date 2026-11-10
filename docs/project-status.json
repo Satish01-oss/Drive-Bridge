@@ -72,8 +72,8 @@
       "group": "Installed Windows app",
       "title": "Test installation, reinstallation and uninstallation",
       "done": true,
-      "revision": 1,
-      "evidence": "GitHub's Windows runner passed app hash, desktop/Start menu shortcut, Installed Apps and uninstall checks before the GUI refresh."
+      "revision": 2,
+      "evidence": "The final GitHub Windows runner passed installation, reinstall, app-hash, desktop/Start menu shortcut, Installed Apps and uninstall tests."
     },
     {
       "id": "desktop",
@@ -87,9 +87,9 @@
       "id": "app-ci",
       "group": "Installed Windows app",
       "title": "Pass app regression checks on the final build",
-      "done": false,
-      "revision": 2,
-      "evidence": "78 local app checks passed, including cursor cleanup, cancelled handoffs, secure transport and both GUI layouts. Final GitHub validation is pending."
+      "done": true,
+      "revision": 3,
+      "evidence": "78 app regression checks passed locally and the final GitHub Windows build/test workflow succeeded. Physical hardware tests remain below."
     },
     {
       "id": "auto-release",
