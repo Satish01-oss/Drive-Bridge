@@ -69,7 +69,8 @@ export function validateMessage(message) {
     case 'session.open':
       object(p, ['deviceId', 'grantId', 'permissionRevision', 'permissions']); identifier(p.deviceId); identifier(p.grantId); integer(p.permissionRevision, 1, Number.MAX_SAFE_INTEGER); strings(p.permissions, PERMISSIONS); requireThat(p.permissions.includes('view'), 'View required'); break;
     case 'session.ready':
-      object(p, ['permissions', 'permissionRevision']); strings(p.permissions, PERMISSIONS); requireThat(p.permissions.includes('view'), 'View required'); integer(p.permissionRevision, 1, Number.MAX_SAFE_INTEGER); break;
+      object(p, ['permissions', 'permissionRevision', 'display']); strings(p.permissions, PERMISSIONS); requireThat(p.permissions.includes('view'), 'View required'); integer(p.permissionRevision, 1, Number.MAX_SAFE_INTEGER);
+      if(p.display!==undefined){object(p.display,['id','width','height']);identifier(p.display.id);integer(p.display.width,1,32768);integer(p.display.height,1,32768);}break;
     case 'heartbeat': object(p, ['nonce']); identifier(p.nonce); break;
     case 'session.stop': object(p, ['reason']); requireThat(['user', 'revoked', 'expired', 'shutdown', 'permission-changed', 'transport-failed'].includes(p.reason), 'Invalid stop reason'); break;
     case 'input': validateInput(p); break;

@@ -10,6 +10,7 @@ public static class SelfTest
     {
         var passed = new List<string>();
         void Check(bool okay, string name) { if (!okay) throw new Exception("FAILED: " + name); passed.Add(name); }
+        passed.AddRange(RemoteNativeCheck.Run());
         await WindowLifecycleCheck.RunAsync();
         passed.Add("Minimize/maximize, close-to-tray, restore and explicit quit preserve the modeless session lifetime");
         await BackgroundSharingCheck.RunAsync();

@@ -4,6 +4,7 @@ public sealed class WelcomeForm : Form
 {
     readonly Button saved;
     MainForm? activeSession;
+    RemoteHostForm? remoteSession;
     readonly bool designPreview;
     public WelcomeForm(bool designPreview=false)
     {
@@ -17,6 +18,13 @@ public sealed class WelcomeForm : Form
         desk.BackColor = AppTheme.Forest; desk.ForeColor = Color.White;
         var remote = Choice("Use devices from another PC", "I’ll paste the connection key on this PC.");
         content.Controls.Add(desk); content.Controls.Add(remote);
+        var internet = Choice("Control this PC from Android", "Remote preview · Connect over the internet with computer approval.");
+        internet.Click += (_, _) =>
+        {
+            Hide(); remoteSession = new RemoteHostForm(designPreview); var session = remoteSession;
+            session.FormClosed += (_, _) => { remoteSession = null; if (session.QuitRequested) Close(); else Show(); }; session.Show();
+        };
+        content.Controls.Add(internet);
         saved = AppTheme.Button("Reconnect my saved PC"); saved.AutoSize=false; saved.Width=700; saved.Height=44; saved.Margin=new Padding(3,15,3,8);
         content.Controls.Add(saved);
         content.Controls.Add(new Label { Text = "The desk PC shares its microphone after pairing or reconnecting. You can turn it off in the connected window.", AutoSize = true, MaximumSize = new Size(540, 0), ForeColor = Color.DimGray });
@@ -36,7 +44,8 @@ public sealed class WelcomeForm : Form
     {
         if ((uint)message.Msg == AppActivation.RestoreMessage)
         {
-            if (activeSession != null && !activeSession.IsDisposed) activeSession.RestoreWindow();
+            if (remoteSession != null && !remoteSession.IsDisposed) remoteSession.RestoreWindow();
+            else if (activeSession != null && !activeSession.IsDisposed) activeSession.RestoreWindow();
             else { Show(); if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal; Activate(); }
             return;
         }

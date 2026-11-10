@@ -1,4 +1,5 @@
 node_modules/
+remote/bundle/
 .DS_Store
 Thumbs.db
 *.log
@@ -7,6 +8,11 @@ Thumbs.db
 **/portable/
 **/installer-output/
 .vs/
+android/.gradle/
+android/**/build/
+android/local.properties
+*.jks
+*.keystore
 *.user
 *.suo
 *.pfx
@@ -15,5 +21,6 @@ Thumbs.db
 .env
 .env.*
 **/self-test-result.txt
+**/remote-contract-result.json
 **/setup-report.txt
 **/audio-capture-check.txt

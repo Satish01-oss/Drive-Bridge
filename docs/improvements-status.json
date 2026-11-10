@@ -28,8 +28,8 @@
       "title": "Create the common app interface",
       "plan": "Create matching Windows and Android screens for modes, device pairing, permissions and remote controls; retain protocol compatibility for future Apple clients.",
       "acceptance": "The same core flow works on small phone screens and Windows/Mac desktops.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Built the shared responsive Windows/Android connection, pairing, approval and remote-control screens, with phone typing and touch/trackpad controls. The bundle builds successfully. Browser/native UI and physical device verification are still pending."
     },
     {
       "id": "matrix",
@@ -73,8 +73,8 @@
       "title": "Connect devices directly with WebRTC",
       "plan": "Negotiate encrypted video/audio and data channels; use STUN to attempt a direct connection and authenticate the device identity.",
       "acceptance": "An authorized session works across separate home and mobile networks.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented signed offer/answer/candidate handling, WebRTC video/audio tracks, a permission-gated reliable input channel, heartbeats and cleanup. Client/service tests pass; real screen-stream and separate-network tests are not yet completed."
     },
     {
       "id": "relay",
@@ -100,8 +100,8 @@
       "title": "Stream the Windows screen",
       "plan": "Add native screen capture, hardware encoding where supported, display selection and cursor metadata alongside the existing sharing engine.",
       "acceptance": "A phone sees the selected display smoothly with correct scaling and orientation.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented primary-display capture, bounded JPEG delivery into the embedded WebRTC canvas, native grant checks and capture cancellation. The Windows app builds cleanly. Real streaming and performance tests remain."
     },
     {
       "id": "win-input",
@@ -109,8 +109,8 @@
       "title": "Receive phone touch, keyboard and trackpad input",
       "plan": "Map touch and trackpad gestures to mouse actions; support scrolling, dragging, right-click, Unicode text and Windows shortcuts.",
       "acceptance": "Typing, selection, drag and shortcuts work without stuck keys or duplicate input.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented native pointer mapping, mouse buttons, scroll, Unicode typing and approved Windows shortcut mappings. Native no-injection tests pass; actual remote input acceptance tests remain."
     },
     {
       "id": "win-audio",
@@ -136,8 +136,8 @@
       "title": "Keep the remote host available in the background",
       "plan": "Extend tray lifecycle handling for internet sessions and offer opt-in start at sign-in. Show locked/asleep/unavailable status honestly.",
       "acceptance": "Minimize and X preserve sharing; explicit quit stops it. Startup recovery is tested after user sign-in.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Added a remote-mode tray window, close/minimize retention, explicit stop/quit and Ctrl+Alt+Shift+Esc emergency stop. The build passes; physical background-session verification remains."
     },
     {
       "id": "mac-permissions",
@@ -208,8 +208,8 @@
       "title": "Build the Android controller app",
       "plan": "Implement device list, pairing, remote display, touch/trackpad modes, zoom, orientation and accessible controls.",
       "acceptance": "A physical Android device controls both a Windows PC and a MacBook.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Created the Android app project with embedded shared UI, Android Keystore-protected identity/grant storage, native signing, microphone permission handling and lifecycle pause/resume. APK compilation and device testing are in progress."
     },
     {
       "id": "ios",
@@ -334,8 +334,8 @@
       "title": "Package Android and updated Windows releases",
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Windows remote preview source is now version 0.9.0 and builds with zero warnings/errors. All 86 Windows regression checks and native-to-service signature verification pass locally. Android build and final installer/runtime packaging are still pending; the public stable app remains 0.8.0."
     },
     {
       "id": "regression",
@@ -372,7 +372,25 @@
       "acceptance": "Public links download the tested signed builds and the checklist reflects actual verified outcomes.",
       "status": "planned",
       "evidence": "Not implemented or verified yet."
+    },
+    {
+      "id": "signed-broker-core",
+      "group": "02 · Secure internet connection",
+      "title": "Implement and test the signed pairing/signaling core",
+      "plan": "Implement a bounded broker with Ed25519 challenge authentication, expiring short codes, host-signed grants and signed WebSocket signaling.",
+      "acceptance": "The broker passes real-socket and adversarial approval/replay tests without enabling desktop control.",
+      "status": "done",
+      "evidence": "56 local tests passed, and the same service suite passed on Windows, macOS and Linux CI. Covers real loopback HTTP/WebSocket authentication, approvals, expired keys, peer-scoped presence, revocation and replay rejection. Public deployment and durable storage remain in the parent service task."
+    },
+    {
+      "id": "native-protected-identity",
+      "group": "03 · Windows remote host",
+      "title": "Implement Windows protected device identity and signing",
+      "plan": "Protect identity keys and grants with Windows DPAPI and make native signed JSON match the shared service contract.",
+      "acceptance": "Identity persists across reload, corrupt data fails closed, and the service verifies a native signature.",
+      "status": "done",
+      "evidence": "Implemented CurrentUser DPAPI storage and native Ed25519 signatures. All 86 Windows checks pass locally, including eight new native identity/input mapping checks. A Node verification script successfully verified the Windows-generated Unicode signature fixture."
     }
   ],
-  "stage": "Connection service in development. 56 local tests pass, including real HTTP/WebSocket pairing and outage/reconnect signaling. The Windows remote host and Android app are not integrated yet."
+  "stage": "Windows and Android implementation in progress: 65 service/client tests and 86 Windows checks pass locally. Native screen/input and Android app code are being integrated; real-device tests and internet hosting remain pending."
 }

@@ -1,5 +1,6 @@
 import http from 'node:http';
 import {pathToFileURL} from 'node:url';
+import {readFile} from 'node:fs/promises';
 import {WebSocketServer,WebSocket} from 'ws';
 import {Broker,ServiceError,exact} from './broker.mjs';
 
@@ -10,11 +11,12 @@ function readBody(req){return new Promise((resolve,reject)=>{
  req.on('data',chunk=>{bytes+=chunk.length;if(bytes>MAX){if(!failed){failed=true;chunks=[];reject(new ServiceError('body-too-large',413));}return;}if(!failed)chunks.push(chunk);});
  req.on('end',()=>{if(failed)return;try{resolve(JSON.parse(Buffer.concat(chunks).toString('utf8')));}catch{reject(new ServiceError('invalid-json'));}});req.on('error',reject);
 });}
-export function createService({broker=new Broker(),publicOrigin=null,allowedOrigins=[],trustProxy=false}={}){
+export function createService({broker=new Broker(),publicOrigin=null,allowedOrigins=[],trustProxy=false,serveClient=false}={}){
  if(publicOrigin){const url=new URL(publicOrigin);if(url.protocol!=='https:'||url.username||url.password||url.pathname!=='/'||url.search||url.hash)throw Error('Public origin must be an HTTPS origin');publicOrigin=url.origin;}
  const origins=new Set([...allowedOrigins,...(publicOrigin?[publicOrigin]:[])]),sockets=new Map();
  const checkRequest=req=>{
-  if(req.headers.origin&&!origins.has(req.headers.origin))throw new ServiceError('origin-not-allowed',403);
+  const localOrigin=!publicOrigin&&/^(?:127\.0\.0\.1|localhost|\[::1\])(?::\d{1,5})?$/.test(req.headers.host||'')&&req.headers.origin==='http://'+req.headers.host;
+  if(req.headers.origin&&!origins.has(req.headers.origin)&&!localOrigin)throw new ServiceError('origin-not-allowed',403);
   if(publicOrigin&&(!trustProxy||req.headers['x-forwarded-proto']!=='https'||req.headers.host!==new URL(publicOrigin).host))throw new ServiceError('https-required',400);
  };
  const bearer=req=>{const m=/^Bearer ([A-Za-z0-9_-]{32})$/.exec(req.headers.authorization||'');if(!m)throw new ServiceError('unauthorized',401);return broker.authorize(m[1]);};
@@ -22,8 +24,19 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
   try{
    if(req.method==='GET'&&req.url==='/health'){json(res,200,{status:'ok',service:'devicebridge-signaling',storage:'ephemeral-development'});return;}
    checkRequest(req);broker.limit('http:'+req.socket.remoteAddress,120);
+   if(req.headers.origin){res.setHeader('Access-Control-Allow-Origin',req.headers.origin);res.setHeader('Vary','Origin');}
+   if(req.method==='OPTIONS'){
+    if(req.headers['access-control-request-method']&&!['POST','GET'].includes(req.headers['access-control-request-method']))throw new ServiceError('method-not-allowed',405);
+    const headers=(req.headers['access-control-request-headers']||'').toLowerCase().split(',').map(h=>h.trim()).filter(Boolean);if(headers.some(h=>!['authorization','content-type'].includes(h)))throw new ServiceError('header-not-allowed',403);
+    res.writeHead(204,{'Access-Control-Allow-Methods':'GET, POST','Access-Control-Allow-Headers':'Authorization, Content-Type','Cache-Control':'no-store'});res.end();return;
+   }
    const path=req.url;if(!path||path.includes('?'))throw new ServiceError('not-found',404);
    if(req.method==='GET'){
+    const assets=new Set(['/index.html','/style.css','/app.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/shared/signatures.mjs','/core/protocol.mjs']),asset=path==='/'?'/index.html':path;
+    if(serveClient&&assets.has(asset)){
+     let bytes;try{bytes=await readFile(new URL('../bundle'+asset,import.meta.url));}catch{throw new ServiceError('client-not-built',503);}
+     res.writeHead(200,{'Content-Type':asset.endsWith('.html')?'text/html; charset=utf-8':asset.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});res.end(bytes);return;
+    }
     const auth=bearer(req);
     if(path==='/v1/requests'){json(res,200,{requests:broker.requests(auth)});return;}
     if(path==='/v1/grants'){json(res,200,{grants:broker.grants(auth)});return;}
@@ -86,7 +99,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
  },async close(){clearInterval(heartbeat);broker.off('device',deliver);for(const ws of wss.clients)ws.terminate();await new Promise(resolve=>wss.close(resolve));server.closeAllConnections();await new Promise(resolve=>server.close(resolve));}};
 }
 if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
- const app=createService({publicOrigin:process.env.PUBLIC_ORIGIN||null,trustProxy:process.env.TRUST_PROXY==='true',allowedOrigins:(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean)});
+ const app=createService({publicOrigin:process.env.PUBLIC_ORIGIN||process.env.RENDER_EXTERNAL_URL||null,trustProxy:process.env.TRUST_PROXY==='true',allowedOrigins:(process.env.ALLOWED_ORIGINS||'').split(',').filter(Boolean),serveClient:true});
  const address=await app.listen(Number(process.env.PORT||48940),process.env.BIND_HOST||'127.0.0.1');console.log(`DeviceBridge development signaling listening on ${address.address}:${address.port}; state is ephemeral.`);
  const stop=()=>app.close().then(()=>process.exit(0));process.on('SIGTERM',stop);process.on('SIGINT',stop);
 }

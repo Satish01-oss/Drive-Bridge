@@ -22,6 +22,7 @@ internal static class Program
             return;
         }
         ApplicationConfiguration.Initialize();
+        if (args.Contains("--remote-preview")) { Application.Run(new RemoteHostForm(designPreview: true)); return; }
         if (args.Contains("--ui-preview")) { if(args.Contains("--welcome")) Application.Run(new WelcomeForm(designPreview:true)); else Application.Run(new MainForm(args.Contains("--desk"), designPreview:true)); return; }
         using var instance = new Mutex(true, "Local\\DeviceBridge.Desktop.v1", out bool firstInstance);
         if (!firstInstance && !args.Contains("--inventory"))
@@ -29,7 +30,8 @@ internal static class Program
             if (!AppActivation.RaiseExisting()) MessageBox.Show("An older DeviceBridge copy is already running. Close its session and welcome windows, then open this update. New versions can be reopened from the system tray.", "DeviceBridge", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        if (args.Contains("--diagnostics")) Application.Run(new DiagnosticsForm());
+        if (args.Contains("--remote")) Application.Run(new RemoteHostForm());
+        else if (args.Contains("--diagnostics")) Application.Run(new DiagnosticsForm());
         else if (args.Contains("--inventory")) File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "setup-report.txt"), DiagnosticsForm.EnvironmentReport());
         else Application.Run(new WelcomeForm());
     }

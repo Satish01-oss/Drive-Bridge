@@ -43,3 +43,9 @@ test('HTTP denies hostile origins, unknown fields and excessive bodies without e
 test('public binds require an explicit HTTPS deployment configuration',async()=>{
  const app=createService();await assert.rejects(app.listen(0,'0.0.0.0'),/HTTPS/);await app.close();assert.throws(()=>createService({publicOrigin:'http://insecure.example'}),/HTTPS/);
 });
+test('browser CORS permits only configured origins and the minimal request headers',async t=>{
+ const app=createService({allowedOrigins:['https://devicebridge.local']}),address=await app.listen();t.after(()=>app.close());const url=`http://127.0.0.1:${address.port}/v1/challenges`;
+ let res=await fetch(url,{method:'OPTIONS',headers:{origin:'https://devicebridge.local','access-control-request-method':'POST','access-control-request-headers':'content-type,authorization'}});assert.equal(res.status,204);assert.equal(res.headers.get('access-control-allow-origin'),'https://devicebridge.local');
+ res=await fetch(url,{method:'OPTIONS',headers:{origin:'https://evil.example'}});assert.equal(res.status,403);assert.equal(res.headers.get('access-control-allow-origin'),null);
+ res=await fetch(url,{method:'OPTIONS',headers:{origin:'https://devicebridge.local','access-control-request-headers':'x-evil'}});assert.equal(res.status,403);
+});

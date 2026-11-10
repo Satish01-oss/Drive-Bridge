@@ -5,10 +5,14 @@ on:
     branches: [main]
     paths:
       - 'app/**'
+      - 'remote/**'
+      - 'scripts/build-remote-client.mjs'
       - '.github/workflows/windows-app.yml'
   pull_request:
     paths:
       - 'app/**'
+      - 'remote/**'
+      - 'scripts/build-remote-client.mjs'
       - '.github/workflows/windows-app.yml'
   workflow_dispatch:
 
@@ -24,6 +28,9 @@ jobs:
         shell: pwsh
     steps:
       - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
       - uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
@@ -38,6 +45,10 @@ jobs:
           if ($process.ExitCode -ne 0) { throw "Regression checks failed: $($process.ExitCode)" }
       - name: Build Windows installer
         run: ./app/DeviceBridge/Build-Installer.ps1 -SkipPublish
+      - name: Verify native Windows signatures match the service contract
+        run: node remote/scripts/verify-native.mjs app/DeviceBridge/portable/remote-contract-result.json
+      - name: Verify installer build output
+        run: Get-ChildItem app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe
       - name: Test installation, desktop shortcut, reinstall and uninstall
         run: |
           $installer = Get-ChildItem app/DeviceBridge/installer-output/DeviceBridge-Setup-*.exe | Select-Object -First 1
