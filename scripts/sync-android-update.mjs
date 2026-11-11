@@ -12,7 +12,7 @@ export function validateDescriptor(value){
  return value;
 }
 async function limited(response,maximum){
- if(!response.ok)throw Error('Android update fetch failed: '+response.status);
+ if(!response.ok){const error=Error('Android update fetch failed: '+response.status);error.status=response.status;throw error;}
  const reader=response.body.getReader(),parts=[];let size=0;
  for(;;){const {value,done}=await reader.read();if(done)break;size+=value.byteLength;if(size>maximum){await reader.cancel();throw Error('Android update response is too large');}parts.push(Buffer.from(value));}
  return Buffer.concat(parts,size);

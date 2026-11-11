@@ -6,6 +6,7 @@ import {buildImprovements} from '../scripts/build-improvements.mjs';
 import {syncRelease} from '../scripts/sync-github-release.mjs';
 import {syncAndroidUpdate} from '../scripts/sync-android-update.mjs';
 import {renderPreview} from './site/preview-release.mjs';
+import {syncPublishedFeeds} from '../scripts/sync-published-feeds.mjs';
 
 const frontend=dirname(fileURLToPath(import.meta.url)),repo=resolve(frontend,'..'),output=join(frontend,'dist');
 process.chdir(repo);
@@ -14,8 +15,13 @@ try{if(await realpath(output)!==output)throw Error('Refusing to replace a linked
 await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
 await cp(join(frontend,'site'),output,{recursive:true});
 buildImprovements({output:join(output,'improvements.html')});
-await syncRelease({root:output});
-await syncAndroidUpdate({directory:output});
+try{
+ await syncRelease({root:output});
+ await syncAndroidUpdate({directory:output});
+}catch(error){
+ if(process.env.GITHUB_TOKEN||![403,429].includes(error.status))throw error;
+ await syncPublishedFeeds({root:output});
+}
 await writeFile(join(output,'index.html'),renderPreview(await readFile(join(output,'index.html'),'utf8'),JSON.parse(await readFile(join(output,'remote-preview.json'),'utf8'))));
 execFileSync(process.execPath,[join(repo,'scripts','verify-site.mjs'),output],{stdio:'inherit'});
 execFileSync(process.execPath,['--check',join(output,'app.js')],{stdio:'inherit'});

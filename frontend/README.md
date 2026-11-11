@@ -41,6 +41,12 @@ publishing the download. API failure fails the build and preserves the prior
 deployment. `GITHUB_TOKEN` is optional for authenticated CI rate limits; it is
 never included in the website.
 
+If an unauthenticated Vercel build receives GitHub API HTTP 403/429, it uses the
+already-published GitHub Pages release feeds instead. It validates the manifest,
+bounded part paths, EXE format and SHA-256 before writing generated output, and
+preserves a newer checked-in Android descriptor. Damaged/unavailable mirrors
+still fail the build. No GitHub credential needs to be copied into Vercel.
+
 If choosing `frontend` as the Vercel root instead, its local `vercel.json` uses
 `node build.mjs` and `dist`. Enable access to source files outside that root for
 the shared `scripts/` and `docs/`. Using the repository root avoids that step.

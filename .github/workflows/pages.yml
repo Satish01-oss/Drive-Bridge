@@ -23,7 +23,7 @@ jobs:
         with:
           node-version: '22'
       - name: Test release synchronization
-        run: node --test scripts/sync-github-release.test.mjs scripts/sync-android-update.test.mjs scripts/preview-release.test.mjs
+        run: node --test scripts/sync-github-release.test.mjs scripts/sync-android-update.test.mjs scripts/preview-release.test.mjs scripts/sync-published-feeds.test.mjs
       - name: Build the verified static frontend
         run: node frontend/build.mjs
         env:

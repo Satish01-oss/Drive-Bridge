@@ -66,7 +66,7 @@ export async function syncRelease({root = resolve('frontend/site'), fetcher = fe
     console.log('No published stable GitHub release yet; keeping the checked-in v0.7.0 download.');
     return null;
   }
-  if (!response.ok) throw new Error(`Could not read latest GitHub release: HTTP ${response.status}`);
+  if (!response.ok) { const error=new Error(`Could not read latest GitHub release: HTTP ${response.status}`);error.status=response.status;throw error; }
   const release = await response.json();
   const {version, filename, kind, asset, url} = selectAsset(release);
   // No API credential is sent to the public asset URL or its redirects.
