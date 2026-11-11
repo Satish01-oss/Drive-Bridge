@@ -11,6 +11,8 @@ public static class SelfTest
         var passed = new List<string>();
         void Check(bool okay, string name) { if (!okay) throw new Exception("FAILED: " + name); passed.Add(name); }
         passed.AddRange(await RemoteNativeCheck.RunAsync());
+        await NavigationCheck.RunAsync();
+        passed.Add("Main menu retains both session modes, Continue reuses them, local role switching disposes the old role, and Quit closes every session");
         await WindowLifecycleCheck.RunAsync();
         passed.Add("Minimize/maximize, close-to-tray, restore and explicit quit preserve the modeless session lifetime");
         await BackgroundSharingCheck.RunAsync();

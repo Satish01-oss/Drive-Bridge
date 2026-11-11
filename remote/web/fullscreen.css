@@ -20,3 +20,7 @@ body.remote-fullscreen #typing label{font-size:11px;margin:0 0 3px}
 body.remote-fullscreen .typing-row input{min-width:0;padding:10px 12px;min-height:42px}
 body.remote-fullscreen .typing-row button{margin:0;min-height:42px;padding:10px 16px}
 @media(max-width:600px){body.remote-fullscreen #session-title{display:none}body.remote-fullscreen .session-bar{justify-content:flex-end}.session-bar{flex-wrap:wrap}.session-actions{margin-left:auto}}
+
+#screen-wrap{touch-action:none;user-select:none;-webkit-user-select:none}#screen{transform-origin:0 0;will-change:transform;pointer-events:none}
+.screen-navigation{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:4px 0;font-size:12px}.screen-navigation button{min-height:36px;padding:7px 12px;margin:0}.screen-navigation #zoom-level{min-width:38px;font-variant-numeric:tabular-nums}.zoom-hint{color:#5b6d5e;font-size:11px}
+body.remote-fullscreen .screen-navigation{flex:0 0 auto;padding:4px 10px;background:#f5f7ef}body.remote-fullscreen .zoom-hint{margin-left:auto}@media(max-width:440px){body.remote-fullscreen .zoom-hint{display:none}}

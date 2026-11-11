@@ -47,6 +47,10 @@ public sealed partial class MainForm : Form
     readonly BackgroundSession tray;
     readonly bool designPreview;
     public bool QuitRequested => tray.QuitRequested;
+    internal bool DeskMode => desk;
+    public event EventHandler? MainMenuRequested;
+    internal void GoToMainMenu() { if(input.Capturing) StopInput(); Hide(); MainMenuRequested?.Invoke(this,EventArgs.Empty); }
+    internal void EndForNavigation() => tray.EndForNavigation();
 
     public MainForm(bool deskMode, bool useSaved = false, bool designPreview = false)
     {

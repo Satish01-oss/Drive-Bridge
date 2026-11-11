@@ -552,7 +552,25 @@
       "acceptance": "Fullscreen/exit/tools work in layout checks, typing stays at the bottom without horizontal overflow, and a canceled request cannot reopen fullscreen.",
       "status": "done",
       "evidence": "Three display-controller tests pass. Browser layout checks at 390×844 and 844×390 showed all 13 controls in Tools, correct fullscreen bounds and typing at the bottom. At reduced height 390×420, the text field and Send remain visible. Exiting restored the normal controls. This is layout/component evidence; physical Android keyboard and rotation acceptance remains pending."
+    },
+    {
+      "id": "android-screen-zoom",
+      "group": "04 · Android and future phone controllers",
+      "title": "Zoom and pan the PC screen on Android",
+      "plan": "Add pinch-to-zoom, two-finger pan and accessible zoom/Fit controls in normal and fullscreen view. Map taps through the zoom transform and suppress remote clicks during pinch gestures.",
+      "acceptance": "On the physical Android phone, pinch zoom and two-finger pan reach small PC controls, taps select the right target, and Fit restores the whole screen.",
+      "status": "in_progress",
+      "evidence": "Implemented 1×–4× pinch zoom, two-finger pan, Zoom in/out and Fit screen in normal and fullscreen view. Taps map through zoom and letterboxing; multi-touch suppresses clicks, cancellation releases a held button, and resizing stays bounded. Ten new gesture tests and all 105 shared tests pass. Isolated browser checks at 390×844 and 844×390 verify zoom/Fit and visible typing without horizontal overflow. Signed Android preview 8 builds and verifies. Physical pinch/pan/small-target acceptance remains pending."
+    },
+    {
+      "id": "windows-main-menu-navigation",
+      "group": "03 · Windows remote host",
+      "title": "Return to the main menu without restarting Windows app",
+      "plan": "Add a visible Main menu button to both Windows modes and Continue buttons on the menu. Reuse open sessions so navigation preserves sharing; stop local sharing only when explicitly switching the local PC role.",
+      "acceptance": "Main menu and Continue work repeatedly in both modes without restarting or dropping the retained connection. Explicit Quit ends every background session.",
+      "status": "in_progress",
+      "evidence": "Implemented Main menu on both Windows modes and Continue on the welcome screen. Existing forms and sharing sessions are reused. Closing the menu retains background sessions; explicit Quit closes all modes. Switching the local PC role ends only that local session after a clear prompt. The native navigation regression and 93 Windows checks pass locally. Packaging and physical installed-build acceptance remain pending."
     }
   ],
-  "stage": "The user confirmed Android preview 7 installed through App updates and reported their current setup working. Windows inspection shows Connected with an approved phone saved; this PC still runs preview 4. No update, disconnect or restart was performed. Vercel frontend and verified downloads are live. Specific microphone, fullscreen rotation/keyboard, device removal, separate-network and outage tests remain open; Mac/iPhone stay deferred."
+  "stage": "Preview 8 implementation is ready: Windows Main menu/Continue navigation and Android screen zoom. Local verification: 93 Windows checks, 105 shared tests and signed Android build. Release packaging and physical acceptance are next; installed working sessions were not changed."
 }

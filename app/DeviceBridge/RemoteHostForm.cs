@@ -29,22 +29,23 @@ internal sealed class RemoteHostForm : Form
     bool allowMicrophone;
     int microphoneDevice = -2;
     public bool QuitRequested { get; private set; }
+    public event EventHandler? MainMenuRequested;
+    internal void GoToMainMenu() { Hide(); MainMenuRequested?.Invoke(this,EventArgs.Empty); }
+    internal void QuitApp() { QuitRequested=true; Close(); }
     public RemoteHostForm(bool designPreview = false)
     {
         this.designPreview = designPreview;
         Text = AppActivation.RemoteTitle; Icon = AppActivation.Icon; ClientSize = new Size(1020, 790); MinimumSize = new Size(780, 620); StartPosition = FormStartPosition.CenterScreen;
         input.Failed += message => { EmergencyStop(); Post(new { type = "native-error", message }); };
-        Controls.Add(web); var menu = new ContextMenuStrip(); menu.Items.Add("Open DeviceBridge", null, (_, _) => RestoreWindow());
-        menu.Items.Add("Stop remote sharing", null, (_, _) => EmergencyStop()); menu.Items.Add("Back to local sharing", null, (_, _) => CloseToWelcome());
-        menu.Items.Add("Disconnect and quit", null, (_, _) => { QuitRequested = true; Close(); });
+        Controls.Add(web); Controls.Add(AppNavigation.Bar(GoToMainMenu)); var menu = new ContextMenuStrip(); menu.Items.Add("Open DeviceBridge", null, (_, _) => RestoreWindow());
+        menu.Items.Add("Stop remote sharing", null, (_, _) => EmergencyStop()); menu.Items.Add("Main menu", null, (_, _) => GoToMainMenu());
+        menu.Items.Add("Disconnect and quit", null, (_, _) => QuitApp());
         tray = new NotifyIcon { Icon = AppActivation.Icon, Text = "DeviceBridge · Remote", ContextMenuStrip = menu, Visible = true }; tray.DoubleClick += (_, _) => RestoreWindow();
-        Shown += async (_, _) => await InitializeAsync();
+        Shown += async (_, _) => { if(!designPreview || Opacity!=0) await InitializeAsync(); };
         Resize += (_, _) => { if (WindowState == FormWindowState.Minimized) Hide(); };
-        FormClosing += (_, e) => { if (!QuitRequested && !returnToWelcome && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); } };
+        FormClosing += (_, e) => { if (!QuitRequested && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); } };
         FormClosed += (_, _) => { StopCapture(); input.Dispose(); tray.Visible = false; tray.Dispose(); UnregisterHotKey(Handle, 41); };
     }
-    bool returnToWelcome;
-    void CloseToWelcome() { returnToWelcome = true; StopCapture(); Close(); }
     public void RestoreWindow() { WindowState = FormWindowState.Normal; Show(); Activate(); }
     protected override void OnHandleCreated(EventArgs e) { base.OnHandleCreated(e); RegisterHotKey(Handle, 41, 1 | 2 | 4, (uint)Keys.Escape); }
     protected override void WndProc(ref Message message) { if ((uint)message.Msg == AppActivation.RestoreMessage) { RestoreWindow(); return; } if (message.Msg == 0x312 && message.WParam == 41) EmergencyStop(); base.WndProc(ref message); }
@@ -56,7 +57,9 @@ internal sealed class RemoteHostForm : Form
             var assets = ExtractAssets();
             var profile = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "DeviceBridge", "Remote", "WebProfile");
             var environment = await CoreWebView2Environment.CreateAsync(null, profile, new CoreWebView2EnvironmentOptions("--disable-background-timer-throttling --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required"));
+            if(IsDisposed || Disposing)return;
             await web.EnsureCoreWebView2Async(environment);
+            if(IsDisposed || Disposing)return;
             web.CoreWebView2.SetVirtualHostNameToFolderMapping("devicebridge.local", assets, CoreWebView2HostResourceAccessKind.DenyCors);
             web.CoreWebView2.Settings.AreDevToolsEnabled = false; web.CoreWebView2.Settings.AreDefaultContextMenusEnabled = false;
             web.CoreWebView2.NewWindowRequested += (_, e) => e.Handled = true;
@@ -68,6 +71,7 @@ internal sealed class RemoteHostForm : Form
         }
         catch (Exception e)
         {
+            if(IsDisposed || Disposing)return;
             Controls.Remove(web); web.Dispose();
             Controls.Add(new Label { Dock = DockStyle.Fill, Padding = new Padding(35), Font = new Font("Segoe UI", 13), Text = "Remote preview could not start.\n\nThis preview needs Microsoft Edge WebView2 Runtime. Local sharing remains available from the tray menu.\n\n" + e.Message });
         }

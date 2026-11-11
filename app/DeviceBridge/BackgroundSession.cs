@@ -5,7 +5,7 @@ internal sealed class BackgroundSession : IDisposable
     readonly Form owner;
     readonly Func<bool> retain;
     readonly NotifyIcon icon;
-    bool announced;
+    bool announced, endingForNavigation;
     public bool QuitRequested { get; private set; }
     public BackgroundSession(Form owner, Func<bool> retain, Action disconnect, bool showIcon = true)
     {
@@ -21,7 +21,7 @@ internal sealed class BackgroundSession : IDisposable
     }
     void Closing(object? sender, FormClosingEventArgs e)
     {
-        if (QuitRequested || e.CloseReason != CloseReason.UserClosing || !retain()) return;
+        if (QuitRequested || endingForNavigation || e.CloseReason != CloseReason.UserClosing || !retain()) return;
         e.Cancel = true; HideToTray();
     }
     void Resized(object? sender, EventArgs e)
@@ -40,6 +40,7 @@ internal sealed class BackgroundSession : IDisposable
         owner.Show();
         if (activate) owner.Activate();
     }
+    public void EndForNavigation() { endingForNavigation=true; owner.Close(); }
     public void Quit() { QuitRequested = true; owner.Close(); }
     public void Dispose() { owner.FormClosing -= Closing; owner.Resize -= Resized; icon.Visible = false; icon.ContextMenuStrip?.Dispose(); icon.Dispose(); }
 }

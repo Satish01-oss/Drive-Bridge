@@ -64,6 +64,6 @@ public sealed partial class MainForm
         bool fitting=false,pending=false;
         fitLayout=()=>{if(fitting){pending=true;return;}fitting=true;try{int pass=0;do{pending=false;AppTheme.FitColumn(left);AppTheme.FitColumn(right);}while(pending&&++pass<4);}finally{fitting=false;}};
         left.ClientSizeChanged+=(_,_)=>fitLayout();right.ClientSizeChanged+=(_,_)=>fitLayout();
-        Controls.Add(shell);fitLayout();
+        Controls.Add(shell); Controls.Add(AppNavigation.Bar(GoToMainMenu)); fitLayout();
     }
 }

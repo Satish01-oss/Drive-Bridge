@@ -3,6 +3,10 @@ namespace DeviceBridge;
 public sealed class WelcomeForm : Form
 {
     readonly Button saved;
+    readonly Button resumeLocal = AppTheme.Button("Continue PC sharing →"), resumeRemote = AppTheme.Button("Continue Android connection →");
+    bool quitting;
+    internal MainForm? LocalSession => activeSession;
+    internal RemoteHostForm? PhoneSession => remoteSession;
     MainForm? activeSession;
     RemoteHostForm? remoteSession;
     readonly bool designPreview;
@@ -12,19 +16,20 @@ public sealed class WelcomeForm : Form
         Text = AppActivation.Title+(designPreview?" · Design preview":""); Icon = AppActivation.Icon; ClientSize = new Size(820, 660); MinimumSize = new Size(760, 640);
         Font = new Font("Segoe UI", 11); BackColor = AppTheme.Background; ForeColor = AppTheme.Forest; StartPosition = FormStartPosition.CenterScreen;
         var content = new FlowLayoutPanel { Dock = DockStyle.Fill, Padding = new Padding(36), FlowDirection = FlowDirection.TopDown, WrapContents = false, AutoScroll = true };
-        content.Controls.Add(new Label { Text = "Two PCs. One familiar setup.", Font = new Font("Segoe UI", 28, FontStyle.Bold), AutoSize = true });
-        content.Controls.Add(new Label { Text = "Choose what this PC will do. Open the app on both PCs, on the same\ntrusted network. Wi-Fi and Ethernet work together.", AutoSize = true, Margin = new Padding(3, 8, 3, 24) });
+        content.Controls.Add(new Label { Text = "Your devices. Your choice.", Font = new Font("Segoe UI", 28, FontStyle.Bold), AutoSize = true });
+        content.Controls.Add(new Label { Text = "Choose local PC sharing or control this computer from Android.\nOpen sessions stay connected when you return to this menu.", AutoSize = true, Margin = new Padding(3, 8, 3, 24) });
         var desk = Choice("Share this PC’s devices", "My keyboard, mouse, headphones and microphone are here.");
         desk.BackColor = AppTheme.Forest; desk.ForeColor = Color.White;
         var remote = Choice("Use devices from another PC", "I’ll paste the connection key on this PC.");
         content.Controls.Add(desk); content.Controls.Add(remote);
         var internet = Choice("Control this PC from Android", "Remote preview · Connect over the internet with computer approval.");
-        internet.Click += (_, _) =>
-        {
-            Hide(); remoteSession = new RemoteHostForm(designPreview); var session = remoteSession;
-            session.FormClosed += (_, _) => { remoteSession = null; if (session.QuitRequested) Close(); else Show(); }; session.Show();
-        };
+        internet.Click += (_, _) => OpenRemote();
         content.Controls.Add(internet);
+        resumeLocal.Visible = resumeRemote.Visible = false;
+        resumeLocal.Click += (_, _) => { if(activeSession is { IsDisposed:false }) { Hide(); activeSession.RestoreWindow(); } };
+        resumeRemote.Click += (_, _) => { if(remoteSession is { IsDisposed:false }) { Hide(); remoteSession.RestoreWindow(); } };
+        content.Controls.Add(resumeLocal); content.Controls.Add(resumeRemote);
+        content.Controls.SetChildIndex(resumeLocal,2); content.Controls.SetChildIndex(resumeRemote,3);
         saved = AppTheme.Button("Reconnect my saved PC"); saved.AutoSize=false; saved.Width=700; saved.Height=44; saved.Margin=new Padding(3,15,3,8);
         content.Controls.Add(saved);
         content.Controls.Add(new Label { Text = "The desk PC shares its microphone after pairing or reconnecting. You can turn it off in the connected window.", AutoSize = true, MaximumSize = new Size(540, 0), ForeColor = Color.DimGray });
@@ -38,36 +43,70 @@ public sealed class WelcomeForm : Form
         saved.Click += (_, _) => { var peer = TrustedPeer.Load(); if (peer != null) Open(peer.Desk, true); };
         help.LinkClicked += (_, _) => { using var guide = new HelpForm(); guide.ShowDialog(this); };
         Activated += (_, _) => saved.Enabled = TrustedPeer.Load() != null;
+        FormClosing += (_, e) => { if(!quitting && e.CloseReason == CloseReason.UserClosing && (activeSession is {IsDisposed:false} || remoteSession is {IsDisposed:false})) { e.Cancel=true; Hide(); } };
     }
     static Button Choice(string title, string description) => new() { Text = title + "\n" + description, TextAlign = ContentAlignment.MiddleLeft, Width = 700, Height = 98, Padding = new Padding(14), BackColor = Color.White, ForeColor = AppTheme.Forest, FlatStyle = FlatStyle.Flat, Margin = new Padding(3, 3, 3, 10), Cursor = Cursors.Hand };
     protected override void WndProc(ref Message message)
     {
         if ((uint)message.Msg == AppActivation.RestoreMessage)
         {
-            if (remoteSession != null && !remoteSession.IsDisposed) remoteSession.RestoreWindow();
+            if (Visible) { if(WindowState==FormWindowState.Minimized) WindowState=FormWindowState.Normal; Activate(); }
+            else if (remoteSession != null && !remoteSession.IsDisposed) remoteSession.RestoreWindow();
             else if (activeSession != null && !activeSession.IsDisposed) activeSession.RestoreWindow();
             else { Show(); if (WindowState == FormWindowState.Minimized) WindowState = FormWindowState.Normal; Activate(); }
             return;
         }
         base.WndProc(ref message);
     }
-    void Open(bool desk, bool reconnect)
+    internal void Open(bool desk, bool reconnect)
     {
+        if(activeSession is {IsDisposed:false})
+        {
+            if(activeSession.DeskMode == desk) { Hide(); activeSession.RestoreWindow(); return; }
+            if(!designPreview && MessageBox.Show(this,"Switching which PC shares devices ends the current local connection. Your Android connection can keep running.","Switch PC-sharing role?",MessageBoxButtons.OKCancel,MessageBoxIcon.Information)!=DialogResult.OK) return;
+            activeSession.EndForNavigation();
+        }
         Hide();
         try
         {
             var session = activeSession = new MainForm(desk, reconnect, designPreview);
+            if(designPreview && Opacity==0) { session.Opacity=0; session.ShowInTaskbar=false; }
+            session.MainMenuRequested += (_, _) => ShowMenu();
             session.FormClosed += (_, _) =>
             {
-                activeSession = null;
-                if (session.QuitRequested) Close();
-                else { Show(); saved.Enabled = TrustedPeer.Load() != null; }
-                session.Dispose();
+                if(ReferenceEquals(activeSession,session)) activeSession = null;
+                if (session.QuitRequested) QuitAll();
+                else if(!quitting) ShowMenu();
             };
             session.Show();
         }
         catch { Show(); throw; }
     }
+    internal void OpenRemote()
+    {
+        Hide();
+        if(remoteSession is {IsDisposed:false}) { remoteSession.RestoreWindow(); return; }
+        var session = remoteSession = new RemoteHostForm(designPreview);
+        if(designPreview && Opacity==0) { session.Opacity=0; session.ShowInTaskbar=false; }
+        session.MainMenuRequested += (_, _) => ShowMenu();
+        session.FormClosed += (_, _) => { if(ReferenceEquals(remoteSession,session)) remoteSession=null; if(session.QuitRequested) QuitAll(); else if(!quitting) ShowMenu(); };
+        session.Show();
+    }
+    internal void ShowMenu()
+    {
+        activeSession?.Hide(); remoteSession?.Hide();
+        resumeLocal.Visible = activeSession is {IsDisposed:false}; resumeRemote.Visible = remoteSession is {IsDisposed:false};
+        saved.Enabled = TrustedPeer.Load()!=null;
+        Show(); if(WindowState==FormWindowState.Minimized) WindowState=FormWindowState.Normal; Activate();
+    }
+    internal void QuitAll()
+    {
+        if(quitting)return; quitting=true;
+        if(activeSession is {IsDisposed:false})activeSession.QuitApp();
+        if(remoteSession is {IsDisposed:false})remoteSession.QuitApp();
+        Close();
+    }
+
 }
 
 public sealed class HelpForm : Form
