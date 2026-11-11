@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Published preview 8 has verified Windows/Android downloads, signed Android APK and isolated Windows install/reinstall/uninstall checks. Current installed Windows source is d150d5e (preview 8), independently inspected. The user confirms updating preserves the saved PC. Preview 9 with recovery/startup/microphone fixes is being packaged."
+      "evidence": "Published preview 11 has source-pinned Windows/Android downloads, a signature-verified Android APK with the existing update identity, and an isolated Windows install/reinstall/uninstall workflow. The user confirms saved-PC preservation through preview 8 and in-app update acceptance through preview 10. Android uninstall/clean-install coverage and preview 11 physical acceptance remain open. Windows is awaiting the requested preview 11 update."
     },
     {
       "id": "regression",
@@ -353,7 +353,7 @@
       "plan": "Test Android-to-Windows on real hardware across separate Wi-Fi/mobile-data networks, plus existing Windows-to-Windows local sharing. Mac/iPhone cases are deferred.",
       "acceptance": "Record actual Android-to-Windows screen, input, audio, microphone, outage recovery and stop-action results.",
       "status": "in_progress",
-      "evidence": "Physical Android installation, fresh pairing, Windows approval and screen viewing are confirmed on the same Wi-Fi. The user initially selected typing success, but the prepared Notepad tab still showed 0 characters. Typing remains unverified; the user then intentionally disconnected for their own testing. Audio, background, separate-network and outage acceptance remain pending. The user then explicitly confirmed they are using the phone typing control to send these chat prompts. Record basic phone typing as user-confirmed; the exact multilingual Notepad fixture remains unverified."
+      "evidence": "User-confirmed physical Android-to-Windows screen viewing, basic typing, zoom/navigation usability, PC sound on the phone, mobile-data access, automatic PC internet-outage recovery, phone background/lock recovery and saved-PC preservation. Phone microphone delivery is not accepted: two VB-CABLE level checks detected zero signal, with the first affected by phone backgrounding. Preview 11 UDP/TCP tests and broader interruption coverage remain open."
     },
     {
       "id": "recovery-tests",
@@ -361,8 +361,8 @@
       "title": "Test internet outages and long sessions",
       "plan": "Test loss/return of host internet, network switching, revocation, relay-only paths, interruptions and sustained sessions on Windows and Mac.",
       "acceptance": "Trusted recovery works without repeated approval; unauthorized reconnect is rejected and no stuck input remains.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "The user confirms automatic screen recovery after one-minute PC Wi-Fi loss while the phone used mobile data, and after leaving/locking/reopening Android. Protocol/service tests reject unauthorized, expired and revoked recovery and cancel queued input. Physical interruption during drag/key/microphone, relay-only paths and sustained sessions remain open; Apple hosts are deferred."
     },
     {
       "id": "publish",
@@ -371,7 +371,7 @@
       "plan": "Update the website with actual platform downloads, supported features and simple setup steps. Mark features complete only after release evidence is available.",
       "acceptance": "Public links download the tested signed builds and the checklist reflects actual verified outcomes.",
       "status": "in_progress",
-      "evidence": "The public preview page advertises version 0.9.0 preview 5 with both verified downloads, build details, requirements and pairing/diagnostic guidance. Stable Windows remains 0.8.0. Full release promotion still requires touch/typing, audio, background, separate-network and outage acceptance."
+      "evidence": "Public Vercel downloads, version labels, Android updater feed on GitHub Pages, checksums, simple setup/update guidance and build-target/test-coverage table serve published preview 11. Stable Windows remains 0.8.0. Full promotion still requires microphone delivery, new transport physical acceptance and remaining hardware/interruption checks; the checklist states those limits."
     },
     {
       "id": "signed-broker-core",
