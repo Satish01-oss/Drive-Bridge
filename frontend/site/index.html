@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>DeviceBridge — Two PCs. One setup.</title>
-  <meta name="description" content="Share your keyboard, mouse, headphones and microphone between two Windows PCs. Download DeviceBridge: one app, a six-character key, and your local network.">
+  <title>DeviceBridge — Your devices. Within reach.</title>
+  <meta name="description" content="Share devices between Windows PCs, or view and control your Windows computer from Android. Simple downloads, six-character pairing and clear setup guides.">
   <meta name="theme-color" content="#1b3026"><link rel="icon" href="icon.svg" type="image/svg+xml">
   <link rel="stylesheet" href="style.css"><script src="app.js" defer></script>
 </head>
@@ -22,16 +22,17 @@
 
 <header class="nav wrap">
   <a class="brand" href="#" aria-label="DeviceBridge home"><svg class="brand-mark" viewBox="0 0 36 36" aria-hidden="true"><rect x="3" y="6" width="21" height="17" rx="5"/><rect x="12" y="14" width="21" height="17" rx="5"/></svg>DeviceBridge</a>
-  <nav aria-label="Main navigation"><a href="#how">How it works</a><a href="#your-desk">Your desk</a><a href="#questions">Questions</a><button class="button small" data-download>Download <span class="nav-version">v<span data-release-version>0.7.0</span></span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></button></nav>
+  <nav aria-label="Main navigation"><a href="#how">How it works</a><a href="remote-preview.html">Windows + Android</a><a href="#questions">Questions</a><button class="button small" data-download>Download <span class="nav-version">v<span data-release-version>0.7.0</span></span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></button></nav>
 </header>
 
 <main id="main">
   <section class="hero wrap" aria-labelledby="hero-title">
     <div class="hero-copy">
       <a class="release-chip" href="#download"><span class="status-dot"></span> WINDOWS <span data-release-channel>PREVIEW</span> <span class="chip-version">v<span data-release-version>0.7.0</span></span><svg class="icon" aria-hidden="true"><use href="#i-arrow"/></svg></a>
-      <h1 id="hero-title">Two PCs.<br>One <span class="highlight">setup.</span></h1>
-      <p class="intro">Your favorite keyboard, mouse, headphones and microphone. Shared between two Windows PCs, right over your local network.</p>
-      <div class="hero-actions"><button class="button primary-download" data-download><svg class="windows-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m1 3 8-1v7H1zm9-1.2L19 .5V9h-9zM1 10h8v7l-8-1zm9 0h9v8.5l-9-1.3z"/></svg><span>Download for Windows<small>v<span data-release-version>0.7.0</span> · <span data-release-size>68 MB · One file</span></small></span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></button></div>
+      <h1 id="hero-title">Your devices.<br>Within <span class="highlight">reach.</span></h1>
+      <p class="intro">Share your keyboard, mouse and audio across two Windows PCs. Or view and control your Windows computer from your Android phone.</p>
+      <div class="hero-actions"><button class="button primary-download" data-download><svg class="windows-icon" viewBox="0 0 20 20" aria-hidden="true"><path d="m1 3 8-1v7H1zm9-1.2L19 .5V9h-9zM1 10h8v7l-8-1zm9 0h9v8.5l-9-1.3z"/></svg><span>Windows PC sharing<small>v<span data-release-version>0.7.0</span> · <span data-release-size>68 MB · One file</span></small></span><svg class="icon" aria-hidden="true"><use href="#i-download"/></svg></button></div>
+      <a class="phone-preview-link" href="remote-preview.html">Get Windows + Android <span data-preview-version>0.9.0 · preview 8</span><span aria-hidden="true">↗</span></a>
       <p class="download-meta"><span data-release-filename>DeviceBridge-0.7.0.exe</span><br>Windows 10 / 11 · 64-bit · No separate runtime</p>
       <p class="setup-note">Mic driver included. Its one-time setup needs Windows approval and a restart.</p>
     </div>
@@ -42,6 +43,14 @@
   </section>
 
   <div class="benefit-strip wrap" aria-label="Setup essentials"><span><svg class="icon" aria-hidden="true"><use href="#i-network"/></svg>Wi-Fi + Ethernet together</span><span><b>6</b>character connection key</span><span><svg class="icon" aria-hidden="true"><use href="#i-check"/></svg>Same app on both PCs</span><span><svg class="icon" aria-hidden="true"><use href="#i-mic"/></svg>Microphone driver included</span></div>
+
+  <section class="mode-section wrap section-space" id="choose-mode" aria-labelledby="mode-title">
+    <div class="section-head"><div><div class="eyebrow">ONE APP. TWO WAYS TO CONNECT.</div><h2 id="mode-title">At your desk.<br>Or in your hand.</h2></div><p>Choose the setup you need.<br>Each download has a clear version.</p></div>
+    <div class="mode-grid">
+      <article class="mode-card"><div class="mode-label">WINDOWS ↔ WINDOWS <span>STABLE</span></div><h3>One familiar desk.</h3><p>Share a keyboard, mouse, headphones and microphone between two PCs on the same trusted router. Wi-Fi and Ethernet work together.</p><ul><li>Move across a screen edge to switch PCs</li><li>Keep sharing when the window closes</li><li>Same Windows app on both computers</li></ul><button class="button" data-download>Download Windows v<span data-release-version>0.7.0</span><span aria-hidden="true">↓</span></button><p class="mode-meta">Windows 10/11 · x64 · Microphone driver included</p></article>
+      <article class="mode-card phone-mode"><div class="mode-label">ANDROID → WINDOWS <span data-preview-version>0.9.0 · preview 8</span></div><h3>Your PC, closer.</h3><p>See your Windows screen on your phone. Tap, type, zoom in on small controls, and use fullscreen with the typing bar close by.</p><ul><li>Pair with a six-character key and PC approval</li><li>Pinch to zoom, move with two fingers</li><li>Get future Android releases in App updates</li></ul><a class="button" href="remote-preview.html">Get Windows + Android<span aria-hidden="true">↗</span></a><p class="mode-meta">Android 8+ · Windows 10/11 x64 · Preview release</p></article>
+    </div><p class="mode-footnote">Android remote access uses a connection service and a direct encrypted connection. Some networks can block the preview connection. Mac and iPhone apps are planned for later.</p>
+  </section>
 
   <section class="how wrap section-space" id="how" aria-labelledby="how-title">
     <div class="section-head"><div><div class="eyebrow">LESS SETUP. MORE DOING.</div><h2 id="how-title">A connection you<br>can explain in a minute.</h2></div><p>Download. Pair. Move your mouse.<br>No account to create, and no cables to swap.</p></div>
@@ -68,12 +77,14 @@
     <details><summary>What happens when I close the window?</summary><p>An active or waiting session continues in the system tray. Reopen DeviceBridge or double-click its tray icon to restore the window. Choose “Disconnect and quit” from the tray menu when you want to exit. Ctrl+Alt+Esc stops sharing immediately.</p></details>
     <details><summary>Will Windows show a publisher warning?</summary><p>Windows may show an unknown-publisher warning for an unsigned build, or a SmartScreen warning for a new file. Check the release notes for that version’s signing status. Installing the included microphone driver also needs administrator approval.</p></details>
     <details><summary>Which Windows PCs are supported?</summary><p>The download is for Windows 10 and 11, 64-bit, with one connected PC pair. Audio capture without a physical playback device needs Windows build 20348 or later, including Windows 11. Older Windows uses a physical playback endpoint. Secure Windows screens and elevated apps cannot be controlled.</p></details>
-    <details><summary>Does sharing use a cloud server?</summary><p>Input and audio travel directly between your paired PCs over an encrypted local-network connection. No account is needed. DeviceBridge does not save your typed text or audio recordings. Keep your connection key private.</p></details>
+    <details><summary>Can I control my PC from Android?</summary><p>Yes, with the <a href="remote-preview.html">Windows + Android preview</a>. Install its Windows app and Android companion, enter the six-character key, then approve the phone on the PC. Your computer must stay awake and online. The current remote preview has been tested on the same Wi-Fi; some separate networks can block direct connections.</p></details>
+    <details><summary>How do I zoom or return to the main menu?</summary><p>In the Android preview, pinch the PC view to zoom, move with two fingers, and tap <strong>Fit screen</strong> to reset. On Windows preview 8 or later, use <strong>← Main menu</strong> and <strong>Continue</strong> to move between screens while sharing keeps running. These controls are in the <a href="remote-preview.html">0.9.0 preview</a>.</p></details>
+    <details><summary>Does sharing use a cloud server?</summary><p>Local Windows-to-Windows sharing stays on your network. Android remote access uses an online service for pairing and connection setup; the screen and controls use a direct encrypted connection. No account is needed. Keep your connection key private.</p></details>
   </div></section>
 </main>
 
 <aside class="vendor-note wrap"><p>Microphone driver: <a href="https://vb-cable.com" target="_blank" rel="noopener">VB-CABLE by VB-Audio</a>, included unchanged. Donationware; contributions and license purchases are welcome. Professional deployments require appropriate <a href="https://vb-audio.com/Services/licensing.htm" target="_blank" rel="noopener">licensing</a>.</p><p>Real workspace photographs are illustrative stock images, not product screenshots or endorsements. <a href="credits.html">Photo credits &amp; license</a>.</p></aside>
-<footer class="wrap"><a class="brand" href="#">DeviceBridge</a><span>Two PCs. One setup.</span><a href="#download">v<span data-release-version>0.7.0</span> for Windows</a><a href="credits.html">Credits</a><a href="improvements.html">New improvements</a><a href="remote-preview.html">Windows + Android preview</a><span>2026</span></footer>
+<footer class="wrap"><a class="brand" href="#">DeviceBridge</a><span>Your devices. Within reach.</span><a href="#download">v<span data-release-version>0.7.0</span> for Windows</a><a href="credits.html">Credits</a><a href="improvements.html">New improvements</a><a href="remote-preview.html">Windows + Android preview</a><span>2026</span></footer>
 
 <dialog id="download-dialog" aria-labelledby="download-title"><button class="close" id="close-dialog" aria-label="Close download status">×</button><div class="eyebrow">DEVICEBRIDGE FOR WINDOWS</div><div class="dialog-version">v<span data-release-version>0.7.0</span> · <span data-release-filename>DeviceBridge-0.7.0.exe</span></div><h2 id="download-title">Getting your app ready.</h2><p id="download-message" role="status" aria-live="polite">Keep this page open while we prepare your download.</p><progress id="download-progress" value="0" max="100" aria-label="Download preparation progress"></progress><p class="fine" id="download-percent">Preparing…</p><a class="button" id="save-app" hidden>Save app ↓</a><button class="button" id="retry-download" hidden>Try again</button><p class="fine">Open this same file on both PCs. You don’t need to extract a ZIP or download a runtime.</p></dialog>
 </body></html>

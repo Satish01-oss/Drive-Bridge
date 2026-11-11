@@ -559,8 +559,8 @@
       "title": "Zoom and pan the PC screen on Android",
       "plan": "Add pinch-to-zoom, two-finger pan and accessible zoom/Fit controls in normal and fullscreen view. Map taps through the zoom transform and suppress remote clicks during pinch gestures.",
       "acceptance": "On the physical Android phone, pinch zoom and two-finger pan reach small PC controls, taps select the right target, and Fit restores the whole screen.",
-      "status": "in_progress",
-      "evidence": "Implemented 1×–4× pinch zoom, two-finger pan, Zoom in/out and Fit screen in normal and fullscreen view. Taps map through zoom and letterboxing; multi-touch suppresses clicks, cancellation releases a held button, and resizing stays bounded. Ten new gesture tests and all 105 shared tests pass. Isolated browser checks at 390×844 and 844×390 verify zoom/Fit and visible typing without horizontal overflow. Signed Android preview 8 builds and verifies. Physical pinch/pan/small-target acceptance remains pending. Published as signed Android preview 8, version code 908, available through App updates. Physical phone pinch/pan acceptance remains pending."
+      "status": "done",
+      "evidence": "Implemented 1×–4× pinch zoom, two-finger pan, Zoom in/out and Fit screen in normal and fullscreen view. Taps map through zoom and letterboxing; multi-touch suppresses clicks, cancellation releases a held button, and resizing stays bounded. Ten new gesture tests and all 105 shared tests pass. Isolated browser checks at 390×844 and 844×390 verify zoom/Fit and visible typing without horizontal overflow. Signed Android preview 8 builds and verifies. Physical pinch/pan/small-target acceptance remains pending. Published as signed Android preview 8, version code 908, available through App updates. Physical phone pinch/pan acceptance remains pending. On 2026-11-11 the user reported that this update is working fine and asked to continue with the website. Record this as user acceptance of preview 8; the agent did not independently observe every physical test variation."
     },
     {
       "id": "windows-main-menu-navigation",
@@ -568,9 +568,18 @@
       "title": "Return to the main menu without restarting Windows app",
       "plan": "Add a visible Main menu button to both Windows modes and Continue buttons on the menu. Reuse open sessions so navigation preserves sharing; stop local sharing only when explicitly switching the local PC role.",
       "acceptance": "Main menu and Continue work repeatedly in both modes without restarting or dropping the retained connection. Explicit Quit ends every background session.",
+      "status": "done",
+      "evidence": "Implemented Main menu on both Windows modes and Continue on the welcome screen. Existing forms and sharing sessions are reused. Closing the menu retains background sessions; explicit Quit closes all modes. Switching the local PC role ends only that local session after a clear prompt. The native navigation regression and 93 Windows checks pass locally. Packaging and physical installed-build acceptance remain pending. Published in Windows preview 8. Installer install/reinstall/uninstall checks pass on the clean Windows runner; the currently installed working copy on this PC was left unchanged. Physical installed-version navigation is pending. On 2026-11-11 the user reported that this update is working fine and asked to continue with the website. Record this as user acceptance of preview 8; the agent did not independently observe every physical test variation."
+    },
+    {
+      "id": "website-current-modes",
+      "group": "07 · Packaging, verification and release",
+      "title": "Refresh the website for Windows and Android preview 8",
+      "plan": "Show both app modes on the landing page, keep stable and preview downloads distinct, display the current preview version and explain zoom/fullscreen/Main menu and app updates.",
+      "acceptance": "The public frontend works on desktop and mobile, links to the correct Windows/Android downloads and shows the current feature/setup guide.",
       "status": "in_progress",
-      "evidence": "Implemented Main menu on both Windows modes and Continue on the welcome screen. Existing forms and sharing sessions are reused. Closing the menu retains background sessions; explicit Quit closes all modes. Switching the local PC role ends only that local session after a clear prompt. The native navigation regression and 93 Windows checks pass locally. Packaging and physical installed-build acceptance remain pending. Published in Windows preview 8. Installer install/reinstall/uninstall checks pass on the clean Windows runner; the currently installed working copy on this PC was left unchanged. Physical installed-version navigation is pending."
+      "evidence": "Implemented homepage choices for stable Windows sharing and the Android preview, current preview badges, zoom/fullscreen/Main menu guides and clearer update instructions. The frontend build verifies the real stable EXE SHA-256 and Android preview metadata. Twelve website/release tests pass. Browser checks at 1440, 390 and 320 pixels show correct versions, functional preview/help navigation and no horizontal overflow. Public deployment is next."
     }
   ],
-  "stage": "Preview 8 is published: Windows Main menu/Continue and Android screen zoom. 93 Windows checks, 105 shared tests, nine Android native tests and isolated installer checks pass. Download or use Android App updates for the new features; current installed sessions were left running. Physical navigation/zoom acceptance remains open."
+  "stage": "The user accepted preview 8 as working. Zoom and Windows menu navigation are checked as user-confirmed. Refreshing the website for both modes, current versions and clearer setup/update guides; dedicated phone audio and internet recovery tests remain open."
 }

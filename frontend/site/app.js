@@ -1,4 +1,5 @@
 (() => {
+  if(document.querySelector('[data-preview-version]'))fetch(new URL('remote-preview.json',location.href),{cache:'no-cache',signal:AbortSignal.timeout(8000)}).then(response=>{if(!response.ok)throw Error('Preview metadata unavailable');return response.json();}).then(value=>{if(!/^\d+\.\d+\.\d+$/.test(value.version)||!Number.isSafeInteger(value.preview)||value.preview<1||value.preview>9999)return;document.querySelectorAll('[data-preview-version]').forEach(el=>el.textContent=value.version+' · preview '+value.preview);}).catch(()=>{});
   const dialog = document.getElementById('download-dialog');
   const title = document.getElementById('download-title');
   const message = document.getElementById('download-message');
