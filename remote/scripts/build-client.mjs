@@ -6,5 +6,6 @@ files.push(['web/controller-display.mjs','controller-display.mjs']);
 files.push(['web/fullscreen.css','fullscreen.css']);
 files.push(['web/screen-gestures.mjs','screen-gestures.mjs']);
 files.push(['client/tcp-control.mjs','client/tcp-control.mjs'],['core/tcp-frame.mjs','core/tcp-frame.mjs'],['client/video-quality.mjs','client/video-quality.mjs']);
+files.push(['core/recovery.mjs','core/recovery.mjs']);
 for(const [source,dest]of files){const text=fs.readFileSync(path.join(root,source),'utf8');fs.mkdirSync(path.dirname(path.join(output,dest)),{recursive:true});fs.writeFileSync(path.join(output,dest),text);}
 console.log('Built remote/bundle: '+files.length+' self-contained client assets.');

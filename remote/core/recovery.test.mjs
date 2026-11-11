@@ -84,3 +84,6 @@ test('grant arrays and returned actions do not expose mutable internal permissio
 test('backward clock changes cannot revive an expired grant',()=>{
  const {r,setTime}=fixture({expiresAt:2000});r.tick();setTime(2000);r.tick();setTime(1000);assert.equal(r.snapshot.state,'approval-required');assert.deepEqual(r.tick(),[]);
 });
+import {reconnectDelay,shouldRestartNetwork} from './recovery.mjs';
+test('repeated failures back off with bounded jitter instead of reconnecting every three seconds',()=>{assert.deepEqual([0,1,2,3,4,5,6].map(n=>reconnectDelay(n,.5)),[1000,2000,4000,8000,16000,30000,30000]);assert.throws(()=>reconnectDelay(-1));});
+test('duplicate online/capability notifications do not restart a working session',()=>{assert.equal(shouldRestartNetwork(true,true,false),false);assert.equal(shouldRestartNetwork(false,false,true),false);assert.equal(shouldRestartNetwork(true,false),true);assert.equal(shouldRestartNetwork(false,true),true);assert.equal(shouldRestartNetwork(true,true,true),true);});

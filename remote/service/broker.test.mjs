@@ -88,3 +88,8 @@ test('restoration cannot revive revoked grants, expand permissions or add reconn
  broker.revoke(host.auth,record.grant.id);assert.throws(()=>broker.restore(host.auth,record),/grant-revoked/);
  const fresh=new Broker(),next=pair(fresh,host,phone,{reconnect:false}),oneTime=approve(fresh,host,next.request);assert.throws(()=>new Broker().restore(host.auth,oneTime),/invalid-restore/);
 });
+test('session recovery status is scoped to the approved devices and vanishes on revocation',()=>{
+ const {broker,host,phone}=fixture(),stranger=login(broker),{request}=pair(broker,host,phone),record=approve(broker,host,request);
+ assert.deepEqual(broker.session(host.auth,record.grant.id),{active:false});assert.throws(()=>broker.session(stranger.auth,record.grant.id),/grant-unavailable/);
+ const offer=signal(phone,host,record);broker.forward(phone.auth,offer);assert.deepEqual(broker.session(phone.auth,record.grant.id),{active:true,sessionId:offer.message.sessionId,generation:offer.message.generation});broker.revoke(host.auth,record.grant.id);assert.throws(()=>broker.session(phone.auth,record.grant.id),/grant-unavailable/);
+});

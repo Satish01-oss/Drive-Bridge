@@ -73,6 +73,10 @@ export class Broker extends EventEmitter{
   for(const id of [g.hostId,g.controllerId])this.emit('device',id,{type:'grant-restored',record:structuredClone(saved)});return structuredClone(saved);
  }
  peers(auth){return this.grants(auth).map(r=>r.grant.hostId===auth.deviceId?r.grant.controllerId:r.grant.hostId);}
+ session(auth,grantId){
+  this.#prune();const g=this.#grants.get(grantId)?.grant;deny(g&&[g.hostId,g.controllerId].includes(auth.deviceId),'grant-unavailable',403);
+  const s=this.#sessions.get(grantId);return s?{active:true,sessionId:s.id,generation:s.generation}:{active:false};
+ }
  forward(auth,signed){
   exact(signed,['grantId','from','to','message','signature']);const {signature,...content}=signed;this.#prune();const record=this.#grants.get(content.grantId);deny(record,'grant-unavailable',403);
   const g=record.grant;deny(content.from===auth.deviceId&&[g.hostId,g.controllerId].includes(content.from)&&content.to===(content.from===g.hostId?g.controllerId:g.hostId),'forbidden',403);

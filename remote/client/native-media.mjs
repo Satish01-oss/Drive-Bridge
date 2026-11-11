@@ -16,7 +16,7 @@ export async function acquireNativeHost(grant,{rpc,post,status,resources}){
    }
    if(message.type!=='frame')return;
    if(drawing||stopped){post({type:'frame.ack',captureId:capture.captureId});return;}drawing=true;
-   try{const image=new Image();image.src='data:image/jpeg;base64,'+message.jpeg;await image.decode();if(!stopped)context.drawImage(image,0,0,canvas.width,canvas.height);}
+   try{const image=new Image();image.src='data:image/jpeg;base64,'+message.jpeg;await image.decode();if(!stopped){context.drawImage(image,0,0,canvas.width,canvas.height);source.videoTrack.requestFrame?.();}}
    finally{drawing=false;post({type:'frame.ack',captureId:capture.captureId});}
   },
   applyInputAndWait:input=>rpc('input',{captureId:capture.captureId,input}),

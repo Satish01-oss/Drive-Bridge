@@ -8,7 +8,8 @@ function setup(t,{permissions=['view','input'],acquire,peerOptions={}}={}){
  const pcs=[],inputs=[],events=[],counts={release:0,dispose:0};
  class PC{constructor(){pcs.push(this);this.connectionState='new';}addTransceiver(){this.replacements??=[];return{sender:this.sender={replaceTrack:async track=>{this.replacements.push(track);}}};}createDataChannel(){return this.channel=new Channel();}async createOffer(){return{type:'offer',sdp:'offer'};}async createAnswer(){return{type:'answer',sdp:'answer'};}async setLocalDescription(d){this.localDescription=d;}async setRemoteDescription(d){this.remoteDescription=d;}addTrack(){}async addIceCandidate(){}close(){this.connectionState='closed';}}
  class Channel{label='control';readyState='connecting';bufferedAmount=0;sent=[];send(data){this.sent.push(data);queueMicrotask(()=>{if(this.other?.readyState==='open')this.other.onmessage?.({data});});}close(){if(this.readyState==='closed')return;this.readyState='closed';this.onclose?.();}}
- class Client{listeners=new Set();constructor(deviceId){this.deviceId=deviceId;}subscribe(fn){this.listeners.add(fn);return()=>this.listeners.delete(fn);}sendControl(frame){for(const fn of [...this.other.listeners])fn({type:'control',frame});}async sendSignal(grantId,message){for(const fn of [...this.other.listeners])fn({type:'signal',signed:{grantId,message}});}}
+ class Client{async sessionAvailable(){return true;}
+ listeners=new Set();constructor(deviceId){this.deviceId=deviceId;}subscribe(fn){this.listeners.add(fn);return()=>this.listeners.delete(fn);}sendControl(frame){for(const fn of [...this.other.listeners])fn({type:'control',frame});}async sendSignal(grantId,message){for(const fn of [...this.other.listeners])fn({type:'signal',signed:{grantId,message}});}}
  const hostClient=new Client(grant.hostId),phoneClient=new Client(grant.controllerId);hostClient.other=phoneClient;phoneClient.other=hostClient;
  const resources={videoTrack:{kind:'video'},display:{id:'DDDDDDDDDDDDDDDD',width:1280,height:800},permissions,applyInput:x=>inputs.push(x),releaseInput:()=>counts.release++,dispose:()=>counts.dispose++};
  const host=new RemotePeer({client:hostClient,record,role:'host',PeerConnection:PC,...peerOptions,acquireHost:acquire||(async()=>resources),event:recordEvent});
@@ -82,3 +83,27 @@ test('unconfirmed TCP text rejects on disconnect instead of replaying in a new s
 test('pointer coalescing preserves the final position before a click and never drops button/key events',async t=>{const f=setup(t);await f.connect();f.phone.sendInput({type:'pointer',point:{displayId:f.phone.display.id,x:.1,y:.2}});f.phone.sendInput({type:'pointer',point:{displayId:f.phone.display.id,x:.7,y:.8}});f.phone.sendInput({type:'button',button:'primary',down:true});await f.phone.sendInputAcknowledged({type:'key',code:'Enter',down:true});assert.deepEqual(f.inputs.map(i=>i.type),['pointer','button','key']);assert.equal(f.inputs[0].point.x,.7);assert.equal((await f.phone.diagnostics()).acknowledgedControls,3);});
 
 test('screen media only forwards UDP ICE candidates',async t=>{const f=setup(t);await f.connect();let encoded=false;f.pcs[1].onicecandidate({candidate:{protocol:'tcp',toJSON(){encoded=true;return{};}}});assert.equal(encoded,false);});
+const clientEvent=(client,event)=>{for(const listener of [...client.listeners])listener(event);};
+test('a brief presence interruption pauses controls without disposing UDP media',async t=>{
+ const f=setup(t);await f.connect();clientEvent(f.phoneClient,{type:'presence',deviceId:f.grant.hostId,online:false});
+ assert.equal(f.phone.active,true);assert.equal(f.phone.ready,false);assert.equal(f.phone.sendInput({type:'text',text:'blocked'}),false);assert.equal(f.counts.dispose,0);
+ clientEvent(f.phoneClient,{type:'presence',deviceId:f.grant.hostId,online:true});assert.equal(f.phone.ready,true);assert.equal(await f.phone.sendInputAcknowledged({type:'text',text:'resumed'}),true);assert.equal(f.inputs.length,1);
+});
+test('a short service outage resumes only after confirming the same secure session',async t=>{
+ const f=setup(t);await f.connect();let checks=0;f.hostClient.sessionAvailable=async()=>{checks++;return true;};
+ clientEvent(f.hostClient,{type:'status',status:'service-offline'});assert.equal(f.host.active,true);assert.equal(f.host.ready,false);assert.equal(f.counts.release,1);assert.equal(f.counts.dispose,0);
+ clientEvent(f.hostClient,{type:'status',status:'service-connected'});await flush();assert.equal(checks,1);assert.equal(f.host.ready,true);assert.equal(f.counts.dispose,0);
+});
+test('service restart with a missing session closes once for fresh authenticated recovery',async t=>{
+ const f=setup(t);await f.connect();f.phoneClient.sessionAvailable=async()=>false;clientEvent(f.phoneClient,{type:'status',status:'service-offline'});clientEvent(f.phoneClient,{type:'status',status:'service-connected'});await flush();assert.equal(f.phone.active,false);assert.match(f.events.find(e=>e.type==='closed').message,/service restarted/);
+});
+test('an interruption with unconfirmed input closes without replaying it',async t=>{
+ const f=setup(t);await f.connect();f.phoneClient.sendControl=()=>{};const pending=f.phone.sendInputAcknowledged({type:'text',text:'unconfirmed'});clientEvent(f.phoneClient,{type:'status',status:'service-offline'});await assert.rejects(pending,/not confirmed/);assert.equal(f.phone.active,false);assert.equal(f.inputs.length,0);
+});
+test('the recovery grace period is bounded and releases sharing after timeout',async t=>{
+ const callbacks=[];const f=setup(t,{peerOptions:{recoveryTimeout:(fn,delay)=>{assert.equal(delay,8000);callbacks.push(fn);return 1;},cancelRecoveryTimeout:()=>{}}});await f.connect();clientEvent(f.phoneClient,{type:'presence',deviceId:f.grant.hostId,online:false});callbacks[0]();assert.equal(f.phone.active,false);assert.match(f.events.find(e=>e.type==='closed').message,/did not recover/);
+});
+test('revocation cancels a late service recovery reply',async t=>{
+ let release;const checking=new Promise(resolve=>release=resolve),f=setup(t);await f.connect();f.phoneClient.sessionAvailable=()=>checking;clientEvent(f.phoneClient,{type:'status',status:'service-offline'});clientEvent(f.phoneClient,{type:'status',status:'service-connected'});clientEvent(f.phoneClient,{type:'grant-revoked',grantId:f.grant.id});release(true);await flush();assert.equal(f.phone.active,false);assert.equal(f.events.filter(e=>e.type==='recovered').length,0);
+});
+test('explicit service stop never uses the recovery grace period',async t=>{const f=setup(t);await f.connect();clientEvent(f.phoneClient,{type:'status',status:'stopped'});assert.equal(f.phone.active,false);assert.equal(f.events.find(e=>e.type==='closed').reason,'user');});

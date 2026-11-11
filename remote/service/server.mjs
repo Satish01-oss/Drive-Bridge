@@ -32,7 +32,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
    }
    const path=req.url;if(!path||path.includes('?'))throw new ServiceError('not-found',404);
    if(req.method==='GET'){
-    const assets=new Set(['/index.html','/style.css','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs','/app.mjs','/pcm-worklet.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/client/native-media.mjs','/shared/signatures.mjs','/core/protocol.mjs','/core/tcp-frame.mjs','/client/tcp-control.mjs','/client/video-quality.mjs']),asset=path==='/'?'/index.html':path;
+    const assets=new Set(['/index.html','/style.css','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs','/app.mjs','/pcm-worklet.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/client/native-media.mjs','/shared/signatures.mjs','/core/protocol.mjs','/core/tcp-frame.mjs','/client/tcp-control.mjs','/client/video-quality.mjs','/core/recovery.mjs']),asset=path==='/'?'/index.html':path;
     if(serveClient&&assets.has(asset)){
      let bytes;try{bytes=await readFile(new URL('../bundle'+asset,import.meta.url));}catch{throw new ServiceError('client-not-built',503);}
      res.writeHead(200,{'Content-Type':asset.endsWith('.html')?'text/html; charset=utf-8':asset.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});res.end(bytes);return;
@@ -40,6 +40,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
     const auth=bearer(req);
     if(path==='/v1/requests'){json(res,200,{requests:broker.requests(auth)});return;}
     if(path==='/v1/grants'){json(res,200,{grants:broker.grants(auth)});return;}
+    if(/^\/v1\/sessions\/[A-Za-z0-9_-]{16,96}$/.test(path)){json(res,200,broker.session(auth,path.split('/')[3]));return;}
     throw new ServiceError('not-found',404);
    }
    if(req.method!=='POST')throw new ServiceError('method-not-allowed',405);

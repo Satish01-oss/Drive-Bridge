@@ -1,5 +1,4 @@
 import {PERMISSIONS} from './protocol.mjs';
-
 // Deterministic policy only: native/WebRTC adapters must execute every returned effect.
 // Grants and authenticated completion events MUST come from the host identity verifier,
 // never directly from an untrusted signaling server or incoming JSON.
@@ -93,4 +92,11 @@ export class Recovery {
   }
   stop() { const effects = this.#cleanup('user-stopped'); this.#trust = null; this.#state = 'stopped'; return effects; }
   revoke() { const effects = this.#cleanup('revoked'); this.#trust = null; this.#state = 'approval-required'; return effects; }
+}
+export function reconnectDelay(failures,sample=Math.random()){
+ if(!Number.isInteger(failures)||failures<0||!Number.isFinite(sample)||sample<0||sample>=1)throw Error('Invalid retry state');
+ return Math.min(30000,Math.round(Math.min(30000,1000*2**Math.min(failures,5))*(.8+sample*.4)));
+}
+export function shouldRestartNetwork(previous,online,changed=false){
+ if([previous,online,changed].some(value=>typeof value!=='boolean'))throw Error('Invalid network state');return previous!==online||(online&&changed);
 }

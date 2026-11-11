@@ -4,6 +4,7 @@ import {validateMessage,validateInput,encodeMessage,decodeMessage,SessionGate} f
 import {toBase64Url} from '../shared/signatures.mjs';
 const randomId=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 export class RemotePeer{
+ #holds=new Set();#holdTimer;#holdTimeout;#holdCancel;#holdDelay;#lastIncident=null;#serviceCheck=0;
  #failure=null;
  #quality;#videoSender;
  #pendingPointer=null;#pointerTimer;
@@ -12,12 +13,13 @@ export class RemotePeer{
  #getUserMedia;#now;#interval;#clearInterval;#microphoneGeneration=0;
  #receivedSignals=0;
  #client;#record;#role;#pc;#channel;#resources;#acquire;#event;#unsubscribe;#sessionId;#generation;#outgoing=Promise.resolve();#incoming=Promise.resolve();#signalSeq=0;#dataSeq=0;#gate;#closed=false;#ready=false;#permissions=[];#candidates=[];#remoteCount=0;#heartbeat;#deadline;#lastData=Date.now();#microphone;#localMicrophone;
- constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval,getUserMedia=options=>navigator.mediaDevices.getUserMedia(options)}){
+ constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval,recoveryDelay=8000,recoveryTimeout=setTimeout,cancelRecoveryTimeout=clearTimeout,getUserMedia=options=>navigator.mediaDevices.getUserMedia(options)}){
+  this.#holdDelay=recoveryDelay;this.#holdTimeout=recoveryTimeout.bind(globalThis);this.#holdCancel=cancelRecoveryTimeout.bind(globalThis);
   this.#getUserMedia=getUserMedia;this.#now=now;this.#interval=interval.bind(globalThis);this.#clearInterval=cancelInterval.bind(globalThis);
   if(!['host','controller'].includes(role))throw Error('Invalid role');const g=record.grant;if(client.deviceId!==(role==='host'?g.hostId:g.controllerId))throw Error('Wrong device role');
   this.#client=client;this.#record=record;this.#role=role;this.#acquire=acquireHost;this.#event=event;this.#pc=new PeerConnection({iceServers});
   this.#pc.onicecandidate=e=>{if(e.candidate&&(!e.candidate.protocol||e.candidate.protocol.toLowerCase()==='udp'))this.#signal('candidate',JSON.stringify(e.candidate.toJSON()));};
-  this.#pc.onconnectionstatechange=()=>{event({type:'transport',state:this.#pc.connectionState});if(['failed','closed'].includes(this.#pc.connectionState))this.close('transport-failed');};
+  this.#pc.onconnectionstatechange=()=>{event({type:'transport',state:this.#pc.connectionState});if(['failed','closed'].includes(this.#pc.connectionState))this.#fail('The UDP screen connection failed. Restoring a fresh secure session.');};
   this.#pc.ontrack=e=>{
    const allowed=this.#role==='controller'?(e.track.kind==='video'?'view':'speaker'):'microphone';
    if(this.#role==='host'&&e.track.kind!=='audio'||!g.permissions.includes(allowed)){e.track.stop();return;}
@@ -25,8 +27,11 @@ export class RemotePeer{
   };
   this.#pc.ondatachannel=e=>{if(this.#role!=='host'||e.channel.label!=='control'||this.#channel){e.channel.close();return;}this.#bindChannel(e.channel);};
   this.#unsubscribe=client.subscribe(e=>{
-   if(e.type==='presence'&&e.deviceId===(this.#role==='host'?g.controllerId:g.hostId)&&!e.online)this.close('transport-failed');
-   if(e.type==='status'&&['service-offline','stopped'].includes(e.status))this.close('transport-failed');
+   if(e.type==='presence'&&e.deviceId===(this.#role==='host'?g.controllerId:g.hostId)){if(e.online)this.#releaseHold('presence');else this.#hold('presence','The other device is restoring its connection service.');}
+   if(e.type==='status'&&e.status==='service-offline')this.#hold('service','Restoring the connection service; controls are paused.');
+   if(e.type==='status'&&e.status==='service-connected'&&this.#holds.has('service'))this.#checkService();
+   if(e.type==='status'&&e.status==='stopped')this.close('user');
+   if(e.type==='error'&&this.#ready&&['session-rejected','control-not-authorized','grant-unavailable'].includes(e.error))this.#fail('Secure control session needs restoring: '+e.error);
    if(e.type==='control'&&e.frame.grantId===g.id){if(++this.#incomingControlCount>128){this.#fail('Control queue is full');return;}this.#controlIncoming=this.#controlIncoming.then(()=>this.#receiveControl(e.frame)).catch(error=>this.#fail(error.message)).finally(()=>this.#incomingControlCount--);}
    if(e.type==='grant-revoked'&&e.grantId===g.id)this.close('revoked');
    if(e.type==='signal'&&e.signed.grantId===g.id){
@@ -38,17 +43,35 @@ export class RemotePeer{
  }
  get active(){return !this.#closed;}
  get grantId(){return this.#record.grant.id;}
- get ready(){return this.#ready&&!!this.#tcp?.ready&&!this.#closed;}
+ get ready(){return this.#ready&&!!this.#tcp?.ready&&!this.#closed&&this.#holds.size===0;}
  get display(){return this.displayInfo;}
  get permissions(){return [...this.#permissions];}
  get approvedPermissions(){return [...this.#record.grant.permissions];}
  async diagnostics(){
-  const report={ready:this.ready,...(this.#quality?.snapshot||{}),connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',controlTransport:this.#tcp?.ready?'tcp-wss-e2e':'negotiating',pendingControls:this.#controlRequests.size,acknowledgedControls:this.#controlAcks,acceptedControls:this.#controlsAccepted,outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0,cleanupErrors:[...this.#cleanupErrors]};
+  const report={ready:this.ready,recovering:this.#holds.size>0,recoveryReasons:[...this.#holds],lastIncident:this.#lastIncident,...(this.#quality?.snapshot||{}),connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',controlTransport:this.#tcp?.ready?'tcp-wss-e2e':'negotiating',pendingControls:this.#controlRequests.size,acknowledgedControls:this.#controlAcks,acceptedControls:this.#controlsAccepted,outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0,cleanupErrors:[...this.#cleanupErrors]};
   try{const stats=await this.#pc.getStats();report.mediaProtocol=videoNetworkSample(stats).protocol;for(const row of stats.values()){
    if(row.type==='inbound-rtp'&&(row.kind==='video'||row.mediaType==='video')){report.videoFramesReceived+=row.framesReceived||0;report.videoFramesDecoded+=row.framesDecoded||0;}
    if(row.type==='outbound-rtp'&&(row.kind==='video'||row.mediaType==='video'))report.videoFramesEncoded+=row.framesEncoded||0;
   }}catch{}
   return report;
+ }
+ #hold(key,message){
+  if(this.#closed)return;this.#lastIncident=message;
+  if(!this.#ready||this.#controlRequests.size||this.#incomingControlCount){this.#fail(message+' Unconfirmed input will not be replayed.');return;}
+  if(this.#holds.has(key))return;this.#holds.add(key);
+  try{this.#resources?.releaseInput?.();}catch{this.#fail('Input release failed while restoring the service.');return;}
+  this.#event({type:'recovering',message});
+  if(this.#holdTimer==null)this.#holdTimer=this.#holdTimeout(()=>this.#fail('Connection service did not recover in time. Restoring a fresh secure session.'),this.#holdDelay);
+ }
+ #releaseHold(key){
+  if(this.#closed||!this.#holds.delete(key)||this.#holds.size)return;
+  this.#holdCancel(this.#holdTimer);this.#holdTimer=null;
+  this.#event({type:'recovered',permissions:this.#permissions});
+ }
+ async #checkService(){
+  const check=++this.#serviceCheck;
+  try{const valid=await this.#client.sessionAvailable(this.grantId,this.#sessionId,this.#generation);if(this.#closed||check!==this.#serviceCheck)return;if(valid)this.#releaseHold('service');else this.#fail('Connection service restarted. Restoring a fresh secure session.');}
+  catch{if(!this.#closed&&check===this.#serviceCheck)this.#fail('The secure control session could not be restored. Reconnecting.');}
  }
  #fail(message){if(this.#closed)return;this.#failure=message;this.#event({type:'error',message});this.close('transport-failed');}
  acceptInitialOffer(message){this.#incoming=this.#incoming.then(()=>this.#receiveSignal(message)).catch(error=>this.#fail(error.message));}
@@ -108,7 +131,7 @@ export class RemotePeer{
       if(m.kind!=='session.ready'||m.seq!==0||m.payload.permissionRevision!==g.revision||!m.payload.display||m.payload.permissions.some(p=>!g.permissions.includes(p)))throw Error('Unexpected control acceptance');this.#permissions=[...m.payload.permissions];this.displayInfo=m.payload.display;
      }
      this.#gate=new SessionGate({sessionId:this.#sessionId,generation:this.#generation,permissions:this.#permissions});this.#ready=true;clearTimeout(this.#deadline);this.#lastData=this.#now();
-     this.#heartbeat=this.#interval(()=>{if(g.expiresAt<=this.#now()){this.close('expired');return;}if(this.#now()-this.#lastData>45000){this.close('transport-failed');return;}this.#send('heartbeat',{nonce:randomId()});},15000);this.#heartbeat.unref?.();this.#announceReady();return;
+     this.#heartbeat=this.#interval(()=>{if(g.expiresAt<=this.#now()){this.close('expired');return;}if(this.#now()-this.#lastData>45000){this.#fail('The screen heartbeat stopped. Restoring a fresh UDP connection.');return;}this.#send('heartbeat',{nonce:randomId()});},15000);this.#heartbeat.unref?.();this.#announceReady();return;
     }
     if(!this.#gate.accept(m))throw Error('Stale or unauthorized data');this.#lastData=this.#now();
     if(m.kind==='session.stop'){this.close(m.payload.reason);return;}
@@ -158,7 +181,7 @@ export class RemotePeer{
  close(reason='user'){
   if(this.#closed||this.#closing)return;this.#closing=true;this.#microphoneGeneration++;
   try{if(this.#channel?.bufferedAmount<=128*1024)this.#send('session.stop',{reason:['user','revoked','expired','shutdown','permission-changed','transport-failed'].includes(reason)?reason:'transport-failed'});}catch{}
-  this.#closed=true;this.#ready=false;clearTimeout(this.#pointerTimer);this.#pendingPointer=null;
+  this.#closed=true;this.#ready=false;this.#serviceCheck++;this.#holdCancel(this.#holdTimer);this.#holdTimer=null;this.#holds.clear();clearTimeout(this.#pointerTimer);this.#pendingPointer=null;
   const cleanup=(name,action)=>{try{action();}catch{this.#cleanupErrors.push(name);}};
   for(const request of this.#controlRequests){clearTimeout(request.timer);request.reject(Error('Control delivery was not confirmed. Check the PC before sending again.'));}this.#controlRequests.clear();this.#controlPending.clear();cleanup('tcp-cipher',()=>this.#tcp?.close());cleanup('video-quality',()=>this.#quality?.stop());
   cleanup('deadline',()=>clearTimeout(this.#deadline));cleanup('heartbeat',()=>this.#clearInterval(this.#heartbeat));

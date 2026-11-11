@@ -75,7 +75,9 @@ export class ConnectionClient{
    const saved=this.#grants.get(event.record?.grant?.id);if(!saved||canonical(saved.grant)!==canonical(event.record.grant))throw Error('Unknown restored grant');await this.#knownGrant(event.record);emit();return;
   }
   if(event.type==='control'){
-   const frame=validateTcpFrame(event.frame),record=this.#grants.get(frame.grantId);if(!record)throw Error('Untrusted TCP control');await this.#knownGrant(record);this.#trusted(record,generation);const g=record.grant,state=this.#sessions.get(g.id),other=this.#deviceId===g.hostId?g.controllerId:g.hostId;
+   // This private record was signature-verified on save/load. Recheck its
+   // current trust and expiry without a native signature RPC per pointer.
+   const frame=validateTcpFrame(event.frame),record=this.#grants.get(frame.grantId);if(!record)throw Error('Untrusted TCP control');this.#trusted(record,generation);const g=record.grant,state=this.#sessions.get(g.id),other=this.#deviceId===g.hostId?g.controllerId:g.hostId;
    if(frame.to!==this.#deviceId||frame.from!==other||state?.id!==frame.sessionId||state.generation!==frame.generation||!g.permissions.includes('input'))throw Error('Wrong TCP control session');emit();return;
   }
   if(event.type==='signal'){
@@ -94,6 +96,11 @@ export class ConnectionClient{
    state={id:message.sessionId,generation:message.generation,last:new Map()};this.#sessions.set(grant.id,state);
   }
   if(message.seq<=(state.last.get(from)??-1))throw Error('Replayed signal');state.last.set(from,message.seq);
+ }
+ async sessionAvailable(grantId,sessionId,generation){
+  const record=this.#grants.get(grantId);if(!record)return false;const epoch=this.#generation;this.#trusted(record,epoch);
+  const result=await this.#http('/v1/sessions/'+grantId);this.#trusted(record,epoch);
+  return result.active===true&&result.sessionId===sessionId&&result.generation===generation;
  }
  async createPairing({permissions=['view','input'],reconnect=false}={}){return this.#post('/v1/pairings',{permissions,reconnect});}
  async requestPairing(code){
