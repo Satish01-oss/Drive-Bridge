@@ -1,27 +1,27 @@
 {
   "version": "0.9.0",
-  "preview": 10,
-  "tag": "v0.9.0-preview.10",
-  "source": "32525a6e3b68c9363ad99789b06ea05fadd918cd",
-  "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/tag/v0.9.0-preview.10",
+  "preview": 11,
+  "tag": "v0.9.0-preview.11",
+  "source": "ce27a0c83d0803b9e1d33d4d224d987ae7497fb6",
+  "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/tag/v0.9.0-preview.11",
   "windows": {
     "filename": "DeviceBridge-Setup-0.9.0.exe",
-    "bytes": 280504641,
-    "sha256": "2171f7d59d783adf34d41c42d7059efdfb86837b933917faa79e209719d43232",
-    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.10/DeviceBridge-Setup-0.9.0.exe"
+    "bytes": 280509305,
+    "sha256": "9fb02f49af9f76edc47cf7737737b79323cab3c21f5f42f09bd7a3d06c54c4cd",
+    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.11/DeviceBridge-Setup-0.9.0.exe"
   },
   "android": {
-    "versionCode": 910,
-    "versionName": "0.9.0-preview.10",
+    "versionCode": 911,
+    "versionName": "0.9.0-preview.11",
     "filename": "DeviceBridge-Android-0.9.0-preview.apk",
-    "bytes": 4088186,
-    "sha256": "34947fdf4f0732ba96b432af514eef1e773f4f53e16df244ecec06f1280a65aa",
-    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.10/DeviceBridge-Android-0.9.0-preview.apk"
+    "bytes": 4093805,
+    "sha256": "a774e27eea329131b4a43636552dd6d8b634dc004d4b3ab11176e7c22e83f5a2",
+    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.11/DeviceBridge-Android-0.9.0-preview.apk"
   },
   "verification": {
-    "windowsWorkflow": "https://github.com/Satish01-oss/Drive-Bridge/actions/runs/42978508288",
+    "windowsWorkflow": "https://github.com/Satish01-oss/Drive-Bridge/actions/runs/42981393194",
     "windowsChecks": 99,
-    "sharedChecks": 115,
+    "sharedChecks": 134,
     "androidNativeChecks": 14,
     "physicalAndroid": false
   }
