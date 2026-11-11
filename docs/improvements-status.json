@@ -38,7 +38,7 @@
       "plan": "Publish Windows x64 and Android minimum versions from actual builds, then validate them on physical hardware. Apple support is deferred.",
       "acceptance": "The Windows/Android preview page states build requirements and distinguishes tested devices from build targets.",
       "status": "in_progress",
-      "evidence": "Current builds target Windows 10/11 x64 and Android 8+ (API 26), compiling with SDK 37.0. Windows build/installer tests and Android build/native tests pass. Physical compatibility across older OS versions is not yet verified."
+      "evidence": "Current builds target Windows 10/11 x64 and Android 8+ (API 26), compiling with SDK 37.0. Windows build/installer tests and Android build/native tests pass. Physical compatibility across older OS versions is not yet verified. Added a public compatibility table distinguishing Windows/Android build targets from physical test coverage and deferred Apple support. Publication is part of preview 11."
     },
     {
       "id": "service",
@@ -587,8 +587,8 @@
       "plan": "Retain WebRTC UDP media where available, add end-to-end encrypted ordered controls over the existing HTTPS/WebSocket TCP service with acknowledgements and duplicate protection, and adapt video quality to network conditions. Do not promise fixed internet latency.",
       "acceptance": "Typing, taps, keys and drags use the TCP path without duplicates or silent loss; media negotiates UDP on the tested network and adjusts quality under constrained bandwidth.",
       "status": "in_progress",
-      "evidence": "Requested by the user on 2026-11-11. Current input uses reliable ordered SCTP over WebRTC, not literal TCP. Planning a distinct encrypted TCP control path; no completed TCP migration is claimed."
+      "evidence": "Implemented encrypted, acknowledged controls over the existing WebSocket/TCP service. Ephemeral P-256 keys are authenticated in signed signaling; HKDF/AES-GCM binds directions and sessions. Real socket tests verify opaque Unicode delivery/acknowledgements, replay/session/revocation rejection and ordering. Pointer coalescing preserves the final position before critical events; text waits for host acknowledgement and unconfirmed input is not replayed after reconnect. UDP trickle candidates are selected for media, and video sender quality adapts to bandwidth/loss/delay. The full shared suite passes 134 tests. Physical transport and constrained-bandwidth acceptance is pending; 1–2 ms internet latency is not promised."
     }
   ],
-  "stage": "29 tasks are verified. Preview 10 with the Illegal invocation correction is published for microphone retesting. Encrypted TCP controls and adaptive UDP/WebRTC video are in development and not yet released. Other unfinished hardware, relay and startup-acceptance checks remain open."
+  "stage": "29 tasks are verified. Preview 11 encrypted TCP controls, UDP media candidate selection and adaptive video pass 134 shared tests. Preview 10 remains the published microphone correction while preview 11 is packaged. Physical microphone/transport confirmation and remaining hardware/relay/startup checks remain open."
 }

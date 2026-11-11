@@ -13,7 +13,7 @@ function socketClient(url,ticket){const ws=new WebSocket(url,['devicebridge.v1',
 test('the public client can load its fullscreen stylesheet and controller module',async t=>{
  execFileSync(process.execPath,[fileURLToPath(new URL('../scripts/build-client.mjs',import.meta.url))]);
  const app=createService({serveClient:true}),address=await app.listen();t.after(()=>app.close());
- for(const asset of ['/','/app.mjs','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs']){const response=await fetch(`http://127.0.0.1:${address.port}`+asset);assert.equal(response.status,200,asset+' must load before pairing');assert.ok((await response.text()).length>100);}
+ for(const asset of ['/','/app.mjs','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs','/core/tcp-frame.mjs','/client/tcp-control.mjs','/client/video-quality.mjs']){const response=await fetch(`http://127.0.0.1:${address.port}`+asset);assert.equal(response.status,200,asset+' must load before pairing');assert.ok((await response.text()).length>100);}
 });
 test('HTTP authentication and host approval produce a verifiable grant across real sockets',async t=>{
  const {request,login}=await appFor(t),host=await login(),phone=await login();assert.equal((await request('/v1/grants')).status,401);

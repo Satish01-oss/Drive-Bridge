@@ -2,7 +2,7 @@ plugins { id("com.android.application") }
 android {
     namespace = "app.devicebridge.remote"
     compileSdk = 37
-    defaultConfig { applicationId = "app.devicebridge.remote"; minSdk = 26; targetSdk = 37; versionCode = 910; versionName = "0.9.0-preview.10" }
+    defaultConfig { applicationId = "app.devicebridge.remote"; minSdk = 26; targetSdk = 37; versionCode = 911; versionName = "0.9.0-preview.11" }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
     sourceSets.getByName("main").assets.srcDir("../../remote/bundle")
     signingConfigs {

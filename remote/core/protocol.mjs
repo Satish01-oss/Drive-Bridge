@@ -75,7 +75,7 @@ export function validateMessage(message) {
     case 'session.stop': object(p, ['reason']); requireThat(['user', 'revoked', 'expired', 'shutdown', 'permission-changed', 'transport-failed'].includes(p.reason), 'Invalid stop reason'); break;
     case 'input': validateInput(p); break;
     case 'signal':
-      object(p, ['type', 'data']); requireThat(['offer', 'answer', 'candidate'].includes(p.type), 'Invalid signal'); requireThat(typeof p.data === 'string' && textBytes(p.data) <= 48 * 1024, 'Invalid signal data'); break;
+      object(p, ['type', 'data']); requireThat(['offer', 'answer', 'candidate', 'control-key'].includes(p.type), 'Invalid signal'); requireThat(typeof p.data === 'string' && textBytes(p.data) <= 48 * 1024, 'Invalid signal data'); break;
   }
   return message;
 }

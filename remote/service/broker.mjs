@@ -1,3 +1,4 @@
+import {validateTcpFrame} from '../core/tcp-frame.mjs';
 import {EventEmitter} from 'node:events';
 import {randomInt} from 'node:crypto';
 import {randomId,digest,publicIdentity,verifiedSignature} from './identity.mjs';
@@ -85,4 +86,12 @@ export class Broker extends EventEmitter{
   deny(m.seq>(session.last.get(content.from)??-1),'replayed-signal',409);session.last.set(content.from,m.seq);
   this.emit('device',content.to,{type:'signal',signed:structuredClone(signed)});return {forwarded:true};
  }
+ forwardControl(auth,frame){
+  this.#prune();try{validateTcpFrame(frame);}catch{throw new ServiceError('invalid-control');}
+  const record=this.#grants.get(frame.grantId),g=record?.grant;deny(g&&frame.from===auth.deviceId&&[g.hostId,g.controllerId].includes(frame.from)&&frame.to===(frame.from===g.hostId?g.controllerId:g.hostId)&&g.permissions.includes('input'),'control-not-authorized',403);
+  const session=this.#sessions.get(g.id);deny(session&&session.id===frame.sessionId&&session.generation===frame.generation,'session-rejected',403);
+  this.limit('control:'+auth.deviceId,9000);session.controlLast??=new Map();deny(frame.seq>(session.controlLast.get(frame.from)??-1),'replayed-control',409);session.controlLast.set(frame.from,frame.seq);
+  this.emit('device',frame.to,{type:'control',frame:structuredClone(frame)});return{forwarded:true};
+ }
+
 }

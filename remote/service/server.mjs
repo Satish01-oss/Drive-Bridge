@@ -32,7 +32,7 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
    }
    const path=req.url;if(!path||path.includes('?'))throw new ServiceError('not-found',404);
    if(req.method==='GET'){
-    const assets=new Set(['/index.html','/style.css','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs','/app.mjs','/pcm-worklet.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/client/native-media.mjs','/shared/signatures.mjs','/core/protocol.mjs']),asset=path==='/'?'/index.html':path;
+    const assets=new Set(['/index.html','/style.css','/fullscreen.css','/controller-display.mjs','/screen-gestures.mjs','/app.mjs','/pcm-worklet.mjs','/client/connection.mjs','/client/storage.mjs','/client/peer.mjs','/client/native-media.mjs','/shared/signatures.mjs','/core/protocol.mjs','/core/tcp-frame.mjs','/client/tcp-control.mjs','/client/video-quality.mjs']),asset=path==='/'?'/index.html':path;
     if(serveClient&&assets.has(asset)){
      let bytes;try{bytes=await readFile(new URL('../bundle'+asset,import.meta.url));}catch{throw new ServiceError('client-not-built',503);}
      res.writeHead(200,{'Content-Type':asset.endsWith('.html')?'text/html; charset=utf-8':asset.endsWith('.css')?'text/css; charset=utf-8':'text/javascript; charset=utf-8','Cache-Control':'no-store','X-Content-Type-Options':'nosniff','Content-Security-Policy':"default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; media-src 'self' blob:; connect-src 'self' https: wss: http://127.0.0.1:* ws://127.0.0.1:*; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"});res.end(bytes);return;
@@ -84,8 +84,9 @@ export function createService({broker=new Broker(),publicOrigin=null,allowedOrig
   ws.on('message',(data,binary)=>{
    try{
     if(sockets.get(auth.deviceId)!==ws||Date.now()>=auth.expiresAt){ws.close(4003,'authentication-expired');return;}
-    broker.limit('ws:'+auth.deviceId,720);if(binary)throw new ServiceError('json-required');const event=JSON.parse(data.toString());
+    if(binary)throw new ServiceError('json-required');const event=JSON.parse(data.toString());broker.limit('ws-all:'+auth.deviceId,12000);if(event.type!=='control')broker.limit('ws:'+auth.deviceId,720);
     if(event.type==='heartbeat'){exact(event,['type']);send(auth.deviceId,{type:'heartbeat-ack'});}
+    else if(event.type==='control'){exact(event,['type','frame']);broker.forwardControl(auth,event.frame);}
     else if(event.type==='signal'){exact(event,['type','signed']);broker.forward(auth,event.signed);send(auth.deviceId,{type:'signal-accepted'});}
     else throw new ServiceError('unknown-event');
    }catch(error){if(ws.readyState===WebSocket.OPEN)ws.send(JSON.stringify({type:'error',error:error instanceof ServiceError?error.code:'invalid-message'}));}

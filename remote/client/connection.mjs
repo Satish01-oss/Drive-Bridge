@@ -1,3 +1,4 @@
+import {validateTcpFrame} from '../core/tcp-frame.mjs';
 import {createIdentity,identityId,signValue,verifyValue,canonical,toBase64Url} from '../shared/signatures.mjs';
 import {PERMISSIONS,validateMessage} from '../core/protocol.mjs';
 const id=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
@@ -73,7 +74,12 @@ export class ConnectionClient{
   if(event.type==='grant-restored'){
    const saved=this.#grants.get(event.record?.grant?.id);if(!saved||canonical(saved.grant)!==canonical(event.record.grant))throw Error('Unknown restored grant');await this.#knownGrant(event.record);emit();return;
   }
+  if(event.type==='control'){
+   const frame=validateTcpFrame(event.frame),record=this.#grants.get(frame.grantId);if(!record)throw Error('Untrusted TCP control');await this.#knownGrant(record);this.#trusted(record,generation);const g=record.grant,state=this.#sessions.get(g.id),other=this.#deviceId===g.hostId?g.controllerId:g.hostId;
+   if(frame.to!==this.#deviceId||frame.from!==other||state?.id!==frame.sessionId||state.generation!==frame.generation||!g.permissions.includes('input'))throw Error('Wrong TCP control session');emit();return;
+  }
   if(event.type==='signal'){
+
    const signed=event.signed,record=this.#grants.get(signed?.grantId);if(!record)throw Error('Untrusted signal');await this.#knownGrant(record);
    const {signature,...content}=signed,g=record.grant,peer=this.#deviceId===g.hostId?g.controllerId:g.hostId,key=peer===g.hostId?record.hostKey:record.controllerKey;
    if(content.to!==this.#deviceId||content.from!==peer||!await verifyValue(key,'signal',content,signature))throw Error('Signal identity mismatch');validateMessage(content.message);if(content.message.kind!=='signal')throw Error('Invalid signaling payload');
@@ -112,6 +118,11 @@ export class ConnectionClient{
   const generation=this.#generation,record=this.#grants.get(grantId);if(!record||!this.connected)throw Error('No active trusted connection');await this.#knownGrant(record);this.#trusted(record,generation);validateMessage(message);if(message.kind!=='signal')throw Error('Invalid signal');
   const g=record.grant,content={grantId,from:this.#deviceId,to:this.#deviceId===g.hostId?g.controllerId:g.hostId,message};
   this.#acceptSignal(g,message,this.#deviceId);const signature=await this.#sign('signal',content);this.#trusted(record,generation);if(!this.connected)throw Error('Service disconnected');this.#socket.send(JSON.stringify({type:'signal',signed:{...content,signature}}));
+ }
+ sendControl(frame){
+  validateTcpFrame(frame);const generation=this.#generation,record=this.#grants.get(frame.grantId);if(!record||!this.connected)throw Error('Control service disconnected');this.#trusted(record,generation);const g=record.grant,state=this.#sessions.get(g.id),other=this.#deviceId===g.hostId?g.controllerId:g.hostId;
+  if(frame.from!==this.#deviceId||frame.to!==other||state?.id!==frame.sessionId||state.generation!==frame.generation||!g.permissions.includes('input'))throw Error('Control is not authorized');
+  if(this.#socket.bufferedAmount>128*1024)throw Error('Control connection is congested');this.#socket.send(JSON.stringify({type:'control',frame}));
  }
  stop(){this.#generation++;this.#starting=null;this.#pairingOperation=null;this.#stopper?.abort();this.#clearInterval(this.#heartbeat);this.#socket?.close();this.#socket=null;this.#token=null;this.#emit({type:'status',status:'stopped'});}
 }

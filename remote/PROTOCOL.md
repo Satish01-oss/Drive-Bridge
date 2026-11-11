@@ -1,6 +1,6 @@
 # Remote protocol v1 and recovery adapter contract
 
-Status: executable contract design with local regression coverage. Native adapters, identity exchange and production services are still pending.
+Status: Windows/Android native adapters and signed identity exchange are implemented. Preview 11 adds encrypted TCP controls; see TCP-CONTROL.md. Physical acceptance is recorded in the public checklist.
 
 ## Compatibility boundary
 
@@ -40,11 +40,11 @@ Every JSON envelope contains exactly:
 | `heartbeat` | Random `nonce`; adapter tracks acknowledgements/liveness |
 | `session.stop` | Reason: user, revoked, expired, shutdown, permission-changed or transport-failed |
 | `input` | One typed input event |
-| `signal` | Type offer/answer/candidate and bounded string data |
+| `signal` | Type offer/answer/candidate/control-key and bounded string data |
 
 Input types are `pointer` (display ID and normalized 0–1 x/y), `button` (primary/secondary/middle plus down), `key` (physical code plus down), `text` (Unicode committed text), `scroll` (bounded x/y deltas), and `release-all`. Platform adapters must validate key codes against their supported mapping, process text composition separately from physical key events, and never synthesize a press for `release-all`.
 
-Use a reliable ordered WebRTC data channel for control/input, video tracks for the selected display and audio tracks for speaker and microphone. Coalesce high-frequency pointer moves before sending; do not drop ordered key/button releases. Signaling is delivered over authenticated HTTPS/WebSocket. TURN relays encrypted WebRTC transport; the service does not terminate end-to-end media encryption. Bind the negotiated WebRTC identity/fingerprint to the approved device before accepting any control or media.
+Preview 11 uses the reliable WebRTC data channel for session setup, liveness and stopping; input moves to a separately acknowledged, end-to-end encrypted WebSocket/TCP channel. See TCP-CONTROL.md. Video/audio use UDP WebRTC media. Coalesce high-frequency pointer moves before sending; do not drop ordered key/button releases. Signaling is delivered over authenticated HTTPS/WebSocket. TURN relays encrypted WebRTC transport; the service does not terminate end-to-end media encryption. Bind the negotiated WebRTC identity/fingerprint to the approved device before accepting any control or media.
 
 `SessionGate` runs **after** identity verification. It rejects input without both view and input permission, replayed sequence numbers, wrong sessions, stale generations, and setup attempts to expand permissions. A stop message closes the gate. Audio/track permission enforcement remains the responsibility of native adapters; it is not implemented by the JSON input gate.
 

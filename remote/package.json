@@ -8,7 +8,7 @@
   },
   "scripts": {
     "build": "node scripts/build-client.mjs",
-    "test": "node --test core/protocol.test.mjs core/recovery.test.mjs service/broker.test.mjs service/server.test.mjs client/connection.test.mjs client/peer.test.mjs web/pcm-worklet.test.mjs web/controller-display.test.mjs web/screen-gestures.test.mjs",
+    "test": "node --test core/protocol.test.mjs core/recovery.test.mjs service/broker.test.mjs service/server.test.mjs client/connection.test.mjs client/peer.test.mjs client/tcp-control.test.mjs client/video-quality.test.mjs web/pcm-worklet.test.mjs web/controller-display.test.mjs web/screen-gestures.test.mjs",
     "start": "node service/server.mjs"
   },
   "dependencies": {
