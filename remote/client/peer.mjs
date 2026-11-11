@@ -3,9 +3,12 @@ import {toBase64Url} from '../shared/signatures.mjs';
 const randomId=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 export class RemotePeer{
  #failure=null;
+ #closing=false;#cleanupErrors=[];
+ #getUserMedia;#now;#interval;#clearInterval;#microphoneGeneration=0;
  #receivedSignals=0;
  #client;#record;#role;#pc;#channel;#resources;#acquire;#event;#unsubscribe;#sessionId;#generation;#outgoing=Promise.resolve();#incoming=Promise.resolve();#signalSeq=0;#dataSeq=0;#gate;#closed=false;#ready=false;#permissions=[];#candidates=[];#remoteCount=0;#heartbeat;#deadline;#lastData=Date.now();#microphone;#localMicrophone;
- constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection}){
+ constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval,getUserMedia=options=>navigator.mediaDevices.getUserMedia(options)}){
+  this.#getUserMedia=getUserMedia;this.#now=now;this.#interval=interval;this.#clearInterval=cancelInterval;
   if(!['host','controller'].includes(role))throw Error('Invalid role');const g=record.grant;if(client.deviceId!==(role==='host'?g.hostId:g.controllerId))throw Error('Wrong device role');
   this.#client=client;this.#record=record;this.#role=role;this.#acquire=acquireHost;this.#event=event;this.#pc=new PeerConnection({iceServers});
   this.#pc.onicecandidate=e=>{if(e.candidate)this.#signal('candidate',JSON.stringify(e.candidate.toJSON()));};
@@ -25,12 +28,14 @@ export class RemotePeer{
   });
   this.#deadline=setTimeout(()=>{if(!this.#ready)this.#fail('The direct connection could not finish. This network may require a relay.');},45000);
  }
+ get active(){return !this.#closed;}
+ get grantId(){return this.#record.grant.id;}
  get ready(){return this.#ready&&!this.#closed;}
  get display(){return this.displayInfo;}
  get permissions(){return [...this.#permissions];}
  get approvedPermissions(){return [...this.#record.grant.permissions];}
  async diagnostics(){
-  const report={ready:this.ready,connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0};
+  const report={ready:this.ready,connection:this.#pc.connectionState||'unknown',ice:this.#pc.iceConnectionState||'unknown',gathering:this.#pc.iceGatheringState||'unknown',signaling:this.#pc.signalingState||'unknown',control:this.#channel?.readyState||'none',outgoingSignals:this.#signalSeq,incomingSignals:this.#receivedSignals,videoFramesReceived:0,videoFramesDecoded:0,videoFramesEncoded:0,cleanupErrors:[...this.#cleanupErrors]};
   try{const stats=await this.#pc.getStats();for(const row of stats.values()){
    if(row.type==='inbound-rtp'&&(row.kind==='video'||row.mediaType==='video')){report.videoFramesReceived+=row.framesReceived||0;report.videoFramesDecoded+=row.framesDecoded||0;}
    if(row.type==='outbound-rtp'&&(row.kind==='video'||row.mediaType==='video'))report.videoFramesEncoded+=row.framesEncoded||0;
@@ -74,7 +79,7 @@ export class RemotePeer{
   }
   if(this.#pc.remoteDescription)for(const candidate of this.#candidates.splice(0))await this.#pc.addIceCandidate(candidate);
  }
- #send(kind,payload){if(this.#closed||this.#channel?.readyState!=='open')return false;if(this.#channel.bufferedAmount>128*1024){this.close('transport-failed');return false;}this.#channel.send(encodeMessage({protocol:'devicebridge.remote',version:1,kind,sessionId:this.#sessionId,generation:this.#generation,seq:this.#dataSeq++,payload}));return true;}
+ #send(kind,payload){if(this.#closed||this.#channel?.readyState!=='open')return false;if(this.#channel.bufferedAmount>128*1024){this.close('transport-failed');return false;}try{this.#channel.send(encodeMessage({protocol:'devicebridge.remote',version:1,kind,sessionId:this.#sessionId,generation:this.#generation,seq:this.#dataSeq++,payload}));return true;}catch{this.close('transport-failed');return false;}}
  #bindChannel(channel){
   this.#channel=channel;channel.onclose=()=>this.close('transport-failed');channel.onerror=()=>this.close('transport-failed');
   channel.onopen=()=>{
@@ -82,7 +87,7 @@ export class RemotePeer{
   };
   channel.onmessage=e=>{
    try{
-    const m=decodeMessage(e.data),g=this.#record.grant;if(m.sessionId!==this.#sessionId||m.generation!==this.#generation||g.expiresAt<=Date.now())throw Error('Session mismatch or expired grant');
+    const m=decodeMessage(e.data),g=this.#record.grant;if(m.sessionId!==this.#sessionId||m.generation!==this.#generation||g.expiresAt<=this.#now())throw Error('Session mismatch or expired grant');
     if(!this.#ready){
      if(this.#role==='host'){
       if(m.kind!=='session.open'||m.seq!==0||m.payload.deviceId!==g.controllerId||m.payload.grantId!==g.id||m.payload.permissionRevision!==g.revision||m.payload.permissions.some(p=>!g.permissions.includes(p)))throw Error('Control permission rejected');
@@ -90,10 +95,10 @@ export class RemotePeer{
      }else{
       if(m.kind!=='session.ready'||m.seq!==0||m.payload.permissionRevision!==g.revision||!m.payload.display||m.payload.permissions.some(p=>!g.permissions.includes(p)))throw Error('Unexpected control acceptance');this.#permissions=[...m.payload.permissions];this.displayInfo=m.payload.display;
      }
-     this.#gate=new SessionGate({sessionId:this.#sessionId,generation:this.#generation,permissions:this.#permissions});this.#ready=true;clearTimeout(this.#deadline);this.#lastData=Date.now();
-     this.#heartbeat=setInterval(()=>{if(g.expiresAt<=Date.now()||Date.now()-this.#lastData>45000){this.close('expired');return;}this.#send('heartbeat',{nonce:randomId()});},15000);this.#heartbeat.unref?.();this.#event({type:'ready',permissions:this.#permissions,display:this.displayInfo});return;
+     this.#gate=new SessionGate({sessionId:this.#sessionId,generation:this.#generation,permissions:this.#permissions});this.#ready=true;clearTimeout(this.#deadline);this.#lastData=this.#now();
+     this.#heartbeat=this.#interval(()=>{if(g.expiresAt<=this.#now()){this.close('expired');return;}if(this.#now()-this.#lastData>45000){this.close('transport-failed');return;}this.#send('heartbeat',{nonce:randomId()});},15000);this.#heartbeat.unref?.();this.#event({type:'ready',permissions:this.#permissions,display:this.displayInfo});return;
     }
-    if(!this.#gate.accept(m))throw Error('Stale or unauthorized data');this.#lastData=Date.now();
+    if(!this.#gate.accept(m))throw Error('Stale or unauthorized data');this.#lastData=this.#now();
     if(m.kind==='session.stop'){this.close(m.payload.reason);return;}
     if(m.kind==='input'){
      if(this.#role!=='host')throw Error('Controller cannot receive input');if(m.payload.type==='pointer'&&m.payload.point.displayId!==this.displayInfo.id)throw Error('Wrong display');this.#resources.applyInput?.(m.payload);
@@ -104,13 +109,27 @@ export class RemotePeer{
  sendInput(input){validateInput(input);if(!this.ready||this.#role!=='controller'||!this.#permissions.includes('input'))return false;return this.#send('input',input);}
  async microphone(enabled){
   if(this.#role!=='controller'||!this.ready||!this.#permissions.includes('microphone'))throw Error('Microphone is not permitted');
-  if(!enabled){await this.#microphone.replaceTrack(null);this.#localMicrophone?.getTracks().forEach(t=>t.stop());this.#localMicrophone=null;return;}
-  const stream=await navigator.mediaDevices.getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
-  if(!this.ready){stream.getTracks().forEach(t=>t.stop());return;}this.#localMicrophone=stream;await this.#microphone.replaceTrack(stream.getAudioTracks()[0]);
+  const attempt=++this.#microphoneGeneration;
+  if(!enabled){this.#localMicrophone?.getTracks().forEach(t=>t.stop());this.#localMicrophone=null;await this.#microphone.replaceTrack(null);return false;}
+  const stream=await this.#getUserMedia({audio:{echoCancellation:true,noiseSuppression:true},video:false});
+  if(!this.ready||attempt!==this.#microphoneGeneration){stream.getTracks().forEach(t=>t.stop());return false;}
+  const previous=this.#localMicrophone;this.#localMicrophone=stream;
+  try{await this.#microphone.replaceTrack(stream.getAudioTracks()[0]);}
+  catch(error){stream.getTracks().forEach(t=>t.stop());if(this.#localMicrophone===stream)this.#localMicrophone=null;throw error;}
+  finally{previous?.getTracks().forEach(t=>t.stop());}
+  if(!this.ready||attempt!==this.#microphoneGeneration){stream.getTracks().forEach(t=>t.stop());return false;}
+  return true;
  }
  close(reason='user'){
-  if(this.#closed)return;if(this.#channel?.bufferedAmount<=128*1024)this.#send('session.stop',{reason:['user','revoked','expired','shutdown','permission-changed','transport-failed'].includes(reason)?reason:'transport-failed'});this.#closed=true;this.#ready=false;
-  clearTimeout(this.#deadline);clearInterval(this.#heartbeat);this.#unsubscribe?.();this.#gate?.close();this.#channel?.close();this.#pc.close();this.#localMicrophone?.getTracks().forEach(t=>t.stop());
-    try{this.#resources?.releaseInput?.();}finally{this.#resources?.dispose?.();this.#event({type:'closed',reason,message:this.#failure});}
+  if(this.#closed||this.#closing)return;this.#closing=true;this.#microphoneGeneration++;
+  try{if(this.#channel?.bufferedAmount<=128*1024)this.#send('session.stop',{reason:['user','revoked','expired','shutdown','permission-changed','transport-failed'].includes(reason)?reason:'transport-failed'});}catch{}
+  this.#closed=true;this.#ready=false;
+  const cleanup=(name,action)=>{try{action();}catch{this.#cleanupErrors.push(name);}};
+  cleanup('deadline',()=>clearTimeout(this.#deadline));cleanup('heartbeat',()=>this.#clearInterval(this.#heartbeat));
+  cleanup('subscription',()=>this.#unsubscribe?.());cleanup('input-gate',()=>this.#gate?.close());
+  cleanup('control-channel',()=>this.#channel?.close());cleanup('peer-connection',()=>this.#pc.close());
+  for(const track of this.#localMicrophone?.getTracks()||[])cleanup('microphone-track',()=>track.stop());this.#localMicrophone=null;
+  cleanup('release-input',()=>this.#resources?.releaseInput?.());cleanup('dispose-media',()=>this.#resources?.dispose?.());
+  try{this.#event({type:'closed',reason,message:this.#failure,cleanupErrors:[...this.#cleanupErrors]});}catch{}
  }
 }

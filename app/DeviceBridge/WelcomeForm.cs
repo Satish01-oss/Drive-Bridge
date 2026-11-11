@@ -82,11 +82,11 @@ public sealed class WelcomeForm : Form
         }
         catch { Show(); throw; }
     }
-    internal void OpenRemote()
+    internal void OpenRemote(bool startHidden=false)
     {
         Hide();
         if(remoteSession is {IsDisposed:false}) { remoteSession.RestoreWindow(); return; }
-        var session = remoteSession = new RemoteHostForm(designPreview);
+        var session = remoteSession = new RemoteHostForm(designPreview,startHidden);
         if(designPreview && Opacity==0) { session.Opacity=0; session.ShowInTaskbar=false; }
         session.MainMenuRequested += (_, _) => ShowMenu();
         session.FormClosed += (_, _) => { if(ReferenceEquals(remoteSession,session)) remoteSession=null; if(session.QuitRequested) QuitAll(); else if(!quitting) ShowMenu(); };
@@ -97,6 +97,7 @@ public sealed class WelcomeForm : Form
         activeSession?.Hide(); remoteSession?.Hide();
         resumeLocal.Visible = activeSession is {IsDisposed:false}; resumeRemote.Visible = remoteSession is {IsDisposed:false};
         saved.Enabled = TrustedPeer.Load()!=null;
+        if(!designPreview){Opacity=1;ShowInTaskbar=true;}
         Show(); if(WindowState==FormWindowState.Minimized) WindowState=FormWindowState.Normal; Activate();
     }
     internal void QuitAll()

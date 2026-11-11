@@ -27,9 +27,9 @@
       "group": "01 · Scope and foundations",
       "title": "Create the common app interface",
       "plan": "Create matching Windows and Android screens for modes, device pairing, permissions and remote controls; retain protocol compatibility for future Apple clients.",
-      "acceptance": "The same core flow works on small phone screens and Windows/Mac desktops.",
-      "status": "in_progress",
-      "evidence": "Implemented shared Windows/Android pairing, host approval and phone controls. The Windows app auto-connects to the service. A local controller preview connected after host approval; phone-size layout and physical Android usability still need acceptance. Moved approval above the key/options, added expiry messages and a Windows tray notification that restores the approval window. Installed Windows/Android apps now hide the service-address field from initial launch, show a first-connection loading message and offer a simple Reconnect button."
+      "acceptance": "The same core pairing/approval/control flow works on Windows and Android phone screens; Mac/iPhone remain deferred.",
+      "status": "done",
+      "evidence": "Implemented shared Windows/Android pairing, host approval and phone controls. The Windows app auto-connects to the service. A local controller preview connected after host approval; phone-size layout and physical Android usability still need acceptance. Moved approval above the key/options, added expiry messages and a Windows tray notification that restores the approval window. Installed Windows/Android apps now hide the service-address field from initial launch, show a first-connection loading message and offer a simple Reconnect button. The physical Android/Windows preview 8 flow, viewing/basic typing and new navigation/zoom were accepted by the user. Small-screen layouts pass browser checks. Apple apps remain deferred by the user."
     },
     {
       "id": "matrix",
@@ -46,8 +46,8 @@
       "title": "Build the pairing and presence service",
       "plan": "Run a small authenticated HTTPS/WebSocket service for pairing, device availability and connection setup. Keep screen/audio content out of service logs.",
       "acceptance": "Two devices on different networks discover each other without opening router ports.",
-      "status": "in_progress",
-      "evidence": "Free Render HTTPS/WebSocket signaling is live. All 84 shared/service/protocol/recovery/peer/audio tests pass, including actual broker restart recovery, durable revocation after network failure, and cancellation of delayed authorization after Stop. Physical separate-network acceptance remains pending."
+      "status": "done",
+      "evidence": "Free Render HTTPS/WebSocket signaling is live. All 84 shared/service/protocol/recovery/peer/audio tests pass, including actual broker restart recovery, durable revocation after network failure, and cancellation of delayed authorization after Stop. Physical separate-network acceptance remains pending. The user confirmed on 2026-11-11 that the Windows screen appears while Android uses mobile data and the PC uses Wi-Fi. This verifies real separate-network pairing/presence for that network pair; it is not a guarantee for restrictive NATs."
     },
     {
       "id": "pair",
@@ -65,7 +65,7 @@
       "plan": "Store device keys in OS-protected storage. Separate screen viewing, input, microphone and permission to reconnect; allow revocation on the computer.",
       "acceptance": "A revoked device cannot reconnect and permissions remain scoped to the approved device.",
       "status": "in_progress",
-      "evidence": "Native Windows stores identity and grants with CurrentUser DPAPI; Android encrypts its store with a Keystore key. The host signs permissions and explicit reconnect consent. Actual client/service tests verify host-only restoration after restart and that a failed revocation request cannot restore a grant deleted locally. Android Keystore persistence and physical revocation acceptance remain pending."
+      "evidence": "Native Windows stores identity and grants with CurrentUser DPAPI; Android encrypts its store with a Keystore key. The host signs permissions and explicit reconnect consent. Actual client/service tests verify host-only restoration after restart and that a failed revocation request cannot restore a grant deleted locally. Android Keystore persistence and physical revocation acceptance remain pending. The user confirms the saved PC survived preview 8 and reconnects after PC internet loss. Physical phone Remove PC/revocation remains pending."
     },
     {
       "id": "webrtc",
@@ -73,8 +73,8 @@
       "title": "Connect devices directly with WebRTC",
       "plan": "Negotiate encrypted video/audio and data channels; use STUN to attempt a direct connection and authenticate the device identity.",
       "acceptance": "An authorized session works across separate home and mobile networks.",
-      "status": "in_progress",
-      "evidence": "Implemented signed offer/answer/ICE, WebRTC video/audio and a permission-gated reliable input channel with heartbeat/cleanup. Native Windows-to-local-browser screen viewing connected through the public service. Physical Android and separate-network acceptance remain pending; no TURN relay is configured."
+      "status": "done",
+      "evidence": "Implemented signed offer/answer/ICE, WebRTC video/audio and a permission-gated reliable input channel with heartbeat/cleanup. Native Windows-to-local-browser screen viewing connected through the public service. Physical Android and separate-network acceptance remain pending; no TURN relay is configured. Physical Android-to-Windows screen viewing works across mobile data and PC Wi-Fi, confirmed by the user on 2026-11-11. The existing authenticated encrypted WebRTC path works without router changes on that tested network pair. No TURN relay is configured."
     },
     {
       "id": "relay",
@@ -119,7 +119,7 @@
       "plan": "Capture the chosen output, encode it for WebRTC, and handle changes of headphones/speakers with clear status.",
       "acceptance": "Computer sound reaches the phone and recovers after output-device changes.",
       "status": "in_progress",
-      "evidence": "Implemented the native Windows system-sound bridge into a WebRTC audio track using bounded PCM queues and an AudioWorklet. The Windows build passes. Actual audible output on Android is not yet verified."
+      "evidence": "Implemented the native Windows system-sound bridge into a WebRTC audio track using bounded PCM queues and an AudioWorklet. The Windows build passes. Actual audible output on Android is not yet verified. On 2026-11-11 the user confirmed PC audio plays on the Android phone. Output-device-change recovery remains unchecked."
     },
     {
       "id": "win-mic",
@@ -137,7 +137,7 @@
       "plan": "Extend tray lifecycle handling for internet sessions and offer opt-in start at sign-in. Show locked/asleep/unavailable status honestly.",
       "acceptance": "Minimize and X preserve sharing; explicit quit stops it. Startup recovery is tested after user sign-in.",
       "status": "in_progress",
-      "evidence": "Actual local testing verified minimize keeps the live screen stream active: the controller received a fresh BACKGROUND STREAM CHECK after the window hid. X also preserved the session. Fixed title-based activation and the remote window handler; reopening the same app restored its hidden window with the connection intact. Opt-in sign-in startup and real-phone background/audio tests remain pending."
+      "evidence": "Actual local testing verified minimize keeps the live screen stream active: the controller received a fresh BACKGROUND STREAM CHECK after the window hid. X also preserved the session. Fixed title-based activation and the remote window handler; reopening the same app restored its hidden window with the connection intact. Opt-in sign-in startup and real-phone background/audio tests remain pending. Implemented opt-in sign-in startup in preview 9 source, off by default. The executable path is quoted, the remote host starts hidden, and uninstall removes the owned Run registration. Six isolated registration checks pass; no startup setting was enabled on the user PC."
     },
     {
       "id": "mac-permissions",
@@ -244,8 +244,8 @@
       "title": "Handle phone backgrounding and network changes",
       "plan": "Follow each mobile OS lifecycle; show paused/disconnected state when suspension prevents a session and reconnect when the app becomes active.",
       "acceptance": "Calls, app switching, screen locking and Wi-Fi/mobile-data changes do not leave stale control active.",
-      "status": "in_progress",
-      "evidence": "Android onPause releases input, closes the remote peer and stops phone microphone capture. Foreground return retries only when trusted reconnect was approved. WebSocket service reconnect/backoff is implemented. Physical app switching, screen lock, calls and Wi-Fi/mobile-data tests remain pending."
+      "status": "done",
+      "evidence": "Android onPause releases input, closes the remote peer and stops phone microphone capture. Foreground return retries only when trusted reconnect was approved. WebSocket service reconnect/backoff is implemented. Physical app switching, screen lock, calls and Wi-Fi/mobile-data tests remain pending. The user left the Android app for about 30 seconds, locked/unlocked the phone and reopened DeviceBridge. The PC screen returned without a new key. Calls and additional device/OS combinations remain broader compatibility tests."
     },
     {
       "id": "phone-sharing",
@@ -262,8 +262,8 @@
       "title": "Show when the computer loses internet",
       "plan": "Use heartbeats and presence expiry to show PC offline / waiting to reconnect, with last-known status and Reconnect now.",
       "acceptance": "Disconnect the computer internet while the phone stays online; the phone shows the correct state.",
-      "status": "in_progress",
-      "evidence": "Presence events and peer heartbeats are connected to the shared UI, including PC offline/waiting and service-retry statuses. Recovery-policy tests and real service socket presence tests pass. Physically removing Windows internet while Android remains online is still required."
+      "status": "done",
+      "evidence": "Presence events and peer heartbeats are connected to the shared UI, including PC offline/waiting and service-retry statuses. Recovery-policy tests and real service socket presence tests pass. Physically removing Windows internet while Android remains online is still required. The user disconnected PC Wi-Fi for about one minute while Android stayed on mobile data, then restored it. The phone recovered the session automatically without a new key."
     },
     {
       "id": "reconnect",
@@ -271,8 +271,8 @@
       "title": "Reconnect when the computer internet returns",
       "plan": "Retry with bounded backoff, renew transport and relay credentials, and authenticate the previously approved device. Keep session IDs and stale attempts isolated.",
       "acceptance": "Restore the computer internet and resume without a fresh key when trusted reconnect was approved.",
-      "status": "in_progress",
-      "evidence": "Implemented capped service retry and permission-gated remote peer retries, fresh session IDs/generations and host-authorized restoration. A real HTTP/WebSocket client test successfully restored consent after restarting the broker. Physical WebRTC recovery after PC internet loss and phone network switching remains unverified."
+      "status": "done",
+      "evidence": "Implemented capped service retry and permission-gated remote peer retries, fresh session IDs/generations and host-authorized restoration. A real HTTP/WebSocket client test successfully restored consent after restarting the broker. Physical WebRTC recovery after PC internet loss and phone network switching remains unverified. The user confirmed automatic remote-screen reconnection after restoring PC internet, without entering a new key, on 2026-11-11. This verifies the requested physical outage scenario for the tested devices and grant."
     },
     {
       "id": "reconnect-consent",
@@ -289,8 +289,8 @@
       "title": "Recover from address and connection changes",
       "plan": "Handle Wi-Fi↔Ethernet and phone Wi-Fi↔mobile data changes through ICE restart or a new authenticated transport.",
       "acceptance": "Both endpoints recover from address changes without router configuration.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Added Android default-network callbacks and shared online/offline recovery. A route change releases input, closes the old peer and reauthenticates the service only while the user still wants sharing. Active peer attempts are not repeatedly replaced. Real phone Wi-Fi-to-mobile recovery and repeated-switch acceptance remain to be verified."
     },
     {
       "id": "safe-recovery",
@@ -299,7 +299,7 @@
       "plan": "Release pressed keys/buttons, restore cursor ownership, reset audio buffers and establish a clean stream on reconnect. Require fresh mic consent if needed.",
       "acceptance": "Interrupt a session during a drag, key press and microphone use; no stuck state or old audio survives.",
       "status": "in_progress",
-      "evidence": "Windows text is now queued asynchronously with a cancellation lifetime; stop clears pending text and releases pressed keys/buttons. The actual local test stopped a long message after its STOP prefix and the character count remained unchanged afterward. Automated queue ordering, cancellation and new-session isolation checks pass. Physical phone drag/key/audio/mic interruption tests remain pending. Added generation guards across asynchronous signature checks and trust-store writes: a stopped client cannot emit a late approval or signal. Revocation is rechecked before delivery; four new race/order checks pass."
+      "evidence": "Windows text is now queued asynchronously with a cancellation lifetime; stop clears pending text and releases pressed keys/buttons. The actual local test stopped a long message after its STOP prefix and the character count remained unchanged afterward. Automated queue ordering, cancellation and new-session isolation checks pass. Physical phone drag/key/audio/mic interruption tests remain pending. Added generation guards across asynchronous signature checks and trust-store writes: a stopped client cannot emit a late approval or signal. Revocation is rechecked before delivery; four new race/order checks pass. Added tests for delayed microphone permission after mute/disconnect, failed track replacement, throwing network sends and independent resource cleanup after failures. Heartbeat transport loss no longer incorrectly expires consent. The shared suite now has 113 passing tests."
     },
     {
       "id": "restart",
@@ -307,8 +307,8 @@
       "title": "Support opt-in desktop recovery after restart",
       "plan": "Start the host after sign-in when enabled and advertise availability. Keep pre-sign-in access and waking an offline PC outside the initial promise.",
       "acceptance": "After restart and sign-in, trusted reconnect works on supported Windows and Mac hosts.",
-      "status": "planned",
-      "evidence": "Not implemented or verified yet."
+      "status": "in_progress",
+      "evidence": "Implemented Windows opt-in startup after sign-in, hidden remote host, original saved approval checks and uninstall cleanup. Six fake-registry tests pass. Actual sign-out/restart acceptance and Apple support remain unverified/deferred."
     },
     {
       "id": "hosting",
@@ -335,7 +335,7 @@
       "plan": "Create signed Android builds and a versioned Windows installer, preserving the existing working mode and upgrade settings. Signing credentials remain private.",
       "acceptance": "Install/update/uninstall tests pass; store/release assets match the advertised version.",
       "status": "in_progress",
-      "evidence": "Preview 7 is published with Android version code 907 and the same publisher identity. The user confirmed installing it through App updates. Windows preview 7 passes 92 checks and isolated installation tests. Read-only inspection on 2026-11-11 found this PC still running Windows preview 4 (product source b78df59), with an approved phone listed and Connected — your computer is ready. The user reported the current setup working, so no Windows update or restart was performed."
+      "evidence": "Published preview 8 has verified Windows/Android downloads, signed Android APK and isolated Windows install/reinstall/uninstall checks. Current installed Windows source is d150d5e (preview 8), independently inspected. The user confirms updating preserves the saved PC. Preview 9 with recovery/startup/microphone fixes is being packaged."
     },
     {
       "id": "regression",
@@ -344,7 +344,7 @@
       "plan": "Run current regression checks and physical keyboard, mouse, sound, microphone and background-sharing tests after integration.",
       "acceptance": "The new remote mode does not regress existing Windows-to-Windows functionality.",
       "status": "in_progress",
-      "evidence": "All 92 Windows non-hardware checks pass, and the preview 4 installer passed isolated GitHub install/reinstall/desktop shortcut/uninstall checks. Physical two-PC local sharing revalidation is still required."
+      "evidence": "All 92 Windows non-hardware checks pass, and the preview 4 installer passed isolated GitHub install/reinstall/desktop shortcut/uninstall checks. Physical two-PC local sharing revalidation is still required. Preview 9 local Windows checks now pass 99 checks including startup registration policy. Actual local two-PC hardware revalidation is still pending."
     },
     {
       "id": "cross-tests",
@@ -487,8 +487,8 @@
       "title": "Install future Android updates from inside DeviceBridge",
       "plan": "Add automatic update checking, in-app download and verified Android installer handoff. Publish a versioned release descriptor; refresh the public update feed automatically after GitHub releases.",
       "acceptance": "After the one-time manual upgrade from the older app, the phone detects a later release, downloads it inside the app and installs it after Android approval while preserving saved devices.",
-      "status": "in_progress",
-      "evidence": "Implemented native update download/install with size, SHA-256, package, version and publisher validation, private-cache FileProvider and Android approval. Five update-feed tests and nine native tests pass. The user confirmed preview 6 showed App updates, checked the live feed and preserved the saved PC. The user then installed preview 7 through App updates and confirmed version 0.9.0 preview 7 on their physical phone, followed by a working-setup report. Explicit saved-device preservation across the 6-to-7 update remains to be recorded."
+      "status": "done",
+      "evidence": "Implemented native update download/install with size, SHA-256, package, version and publisher validation, private-cache FileProvider and Android approval. Five update-feed tests and nine native tests pass. The user confirmed preview 6 showed App updates, checked the live feed and preserved the saved PC. The user then installed preview 7 through App updates and confirmed version 0.9.0 preview 7 on their physical phone, followed by a working-setup report. Explicit saved-device preservation across the 6-to-7 update remains to be recorded. The user explicitly confirmed preview 8 preserved the saved PC without re-pairing, after earlier confirming preview 7 installed through App updates. Signature/publisher/integrity tests pass and the live feed serves preview 8."
     },
     {
       "id": "android-update-policy",
@@ -542,7 +542,7 @@
       "plan": "Check the active host permission grant and effective audio capability. Explain missing permission or driver setup clearly, then test the phone microphone after explicit Windows approval.",
       "acceptance": "The phone microphone control is available for an approved microphone grant and a Windows recording app receives the phone audio.",
       "status": "in_progress",
-      "evidence": "Preview 7 explains absent microphone consent separately from unavailable native routing. An earlier test grant allowed view/input only; on 2026-11-11 the Windows UI showed an approved phone with view, input, speaker, microphone and trusted reconnect, so the old grant limitation no longer describes that saved device. Earlier read-only endpoint enumeration found no active VB-CABLE playback endpoint on this PC. No recording/playback or driver installation was performed by the agent. The user later reported the setup working in general; a specific Windows recording-app test of phone microphone audio remains unverified."
+      "evidence": "Preview 7 explains absent microphone consent separately from unavailable native routing. An earlier test grant allowed view/input only; on 2026-11-11 the Windows UI showed an approved phone with view, input, speaker, microphone and trusted reconnect, so the old grant limitation no longer describes that saved device. Earlier read-only endpoint enumeration found no active VB-CABLE playback endpoint on this PC. No recording/playback or driver installation was performed by the agent. The user later reported the setup working in general; a specific Windows recording-app test of phone microphone audio remains unverified. Current read-only PC inspection confirms installed preview 8 and an active virtual microphone route. The user completed driver setup/restart and fresh approval, but pressing Microphone off still does not start capture. Source inspection found missing Android MODIFY_AUDIO_SETTINGS and a permission-dialog lifecycle cancellation risk. Preview 9 adds the routing permission, permission-safe lifecycle, visible fullscreen status and microphone cleanup/error handling. Physical confirmation is pending."
     },
     {
       "id": "fullscreen-layout-checks",
@@ -579,7 +579,16 @@
       "acceptance": "The public frontend works on desktop and mobile, links to the correct Windows/Android downloads and shows the current feature/setup guide.",
       "status": "done",
       "evidence": "Implemented homepage choices for stable Windows sharing and the Android preview, current preview badges, zoom/fullscreen/Main menu guides and clearer update instructions. The frontend build verifies the real stable EXE SHA-256 and Android preview metadata. Twelve website/release tests pass. Browser checks at 1440, 390 and 320 pixels show correct versions, functional preview/help navigation and no horizontal overflow. Public deployment is next. Published source 34f82da7a0793f05f086c6e685cfadb19d618e27 to READY Vercel deployment dpl_JBQQRivgtL3BoPks1SiEjhiMALPn. The public homepage, preview guide, checklist and preview 8 metadata return 200 and contain the expected updates. No app binaries or backend configuration were changed."
+    },
+    {
+      "id": "split-media-control-transport",
+      "group": "02 · Secure internet connection",
+      "title": "Use UDP media with reliable TCP controls",
+      "plan": "Retain WebRTC UDP media where available, add end-to-end encrypted ordered controls over the existing HTTPS/WebSocket TCP service with acknowledgements and duplicate protection, and adapt video quality to network conditions. Do not promise fixed internet latency.",
+      "acceptance": "Typing, taps, keys and drags use the TCP path without duplicates or silent loss; media negotiates UDP on the tested network and adjusts quality under constrained bandwidth.",
+      "status": "in_progress",
+      "evidence": "Requested by the user on 2026-11-11. Current input uses reliable ordered SCTP over WebRTC, not literal TCP. Planning a distinct encrypted TCP control path; no completed TCP migration is claimed."
     }
   ],
-  "stage": "The refreshed Windows/Android website is live on Vercel with current versions, download choices and setup/update guides. Preview 8 zoom and Windows Main menu navigation are user-confirmed and checked. Dedicated phone audio, separate-network access and recovery tests remain open; Mac/iPhone remain deferred."
+  "stage": "Physical tests passed: separate-network screen viewing, automatic recovery after PC Wi-Fi loss, phone background/lock recovery, saved-PC update persistence and PC sound on Android. Preview 9 microphone/recovery/startup fixes are being packaged. The newly requested UDP-media/TCP-control work is in progress; microphone recording and trusted-device removal remain open."
 }

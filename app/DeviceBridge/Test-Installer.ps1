@@ -23,7 +23,11 @@ foreach ($attempt in 1,2) {
     if ($entry.DisplayName -ne 'DeviceBridge') { throw 'Installed Apps entry is missing.' }
     Write-Output "Install/reinstall $attempt passed: app, desktop, Start menu and uninstall registration verified."
 }
+$startupKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Run'
+New-Item -Path $startupKey -Force | Out-Null
+New-ItemProperty -Path $startupKey -Name 'DeviceBridge.Remote' -Value ('"'+$installedExe+'" --remote --start-hidden') -PropertyType String -Force | Out-Null
 $uninstaller = Join-Path $installDir 'unins000.exe'
 $process = Start-Process -FilePath $uninstaller -ArgumentList '/VERYSILENT /SUPPRESSMSGBOXES /NORESTART' -WindowStyle Hidden -Wait -PassThru
 if ($process.ExitCode -ne 0 -or (Test-Path -LiteralPath $installedExe) -or (Test-Path -LiteralPath $shortcutPath)) { throw 'Uninstall did not remove the installed app and desktop shortcut.' }
+if ((Get-ItemProperty -LiteralPath $startupKey -Name 'DeviceBridge.Remote' -ErrorAction SilentlyContinue).'DeviceBridge.Remote') { throw 'Uninstall left the app startup registration behind.' }
 Write-Output 'Uninstall passed. Saved pairing/preferences are intentionally retained.'

@@ -4,6 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -23,7 +26,14 @@ class MainActivity: Activity() {
     private val worker=Executors.newSingleThreadExecutor()
     private val updateWorker=Executors.newSingleThreadExecutor()
     private lateinit var updater:AppUpdater
+    private var networkManager:ConnectivityManager?=null
+    private var lastNetwork:Network?=null
+    private var lastOnline=false
+    private var networkRegistered=false
+    private val networkCallback=object:ConnectivityManager.NetworkCallback(){override fun onAvailable(network:Network){notifyNetwork()};override fun onLost(network:Network){notifyNetwork()};override fun onCapabilitiesChanged(network:Network,caps:NetworkCapabilities){notifyNetwork()}}
     private var fullscreen=false
+    private val microphoneFlow=MicrophonePermissionFlow()
+    private var remotePaused=true
     private var microphoneRequest: PermissionRequest?=null
     private val origin="https://appassets.androidplatform.net"
     override fun onCreate(state: Bundle?) {
@@ -42,14 +52,16 @@ class MainActivity: Activity() {
         web.webChromeClient=object:WebChromeClient(){override fun onPermissionRequest(request:PermissionRequest){runOnUiThread{
             if(request.origin.toString().trimEnd('/')!=origin||request.resources.any{it!=PermissionRequest.RESOURCE_AUDIO_CAPTURE}){request.deny();return@runOnUiThread}
             if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED)request.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))
-            else{microphoneRequest?.deny();microphoneRequest=request;requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO),41)}
-        }};override fun onPermissionRequestCanceled(request:PermissionRequest){if(microphoneRequest===request)microphoneRequest=null}}
+            else{microphoneRequest?.deny();microphoneRequest=request;microphoneFlow.begin();requestPermissions(arrayOf(Manifest.permission.RECORD_AUDIO),41)}
+        }};override fun onPermissionRequestCanceled(request:PermissionRequest){if(microphoneRequest===request){microphoneRequest=null;microphoneFlow.cancel()}}}
         web.addJavascriptInterface(Bridge(),"DeviceBridgeAndroid");web.loadUrl("$origin/assets/index.html")
+        networkManager=getSystemService(ConnectivityManager::class.java);networkManager?.registerDefaultNetworkCallback(networkCallback);networkRegistered=true
     }
     inner class Bridge {
         @JavascriptInterface fun postMessage(text:String){if(text.length>3*1024*1024)return;val updateCall=try{JSONObject(text).optString("type").startsWith("app.update.")}catch(_:Exception){return};(if(updateCall)updateWorker else worker).execute{
             var rpcId:String?=null
             try{val request=JSONObject(text);rpcId=request.optString("rpcId").takeIf{it.isNotEmpty()};val result:Any?=when(request.getString("type")){
+                "device.status"->JSONObject().put("appVersion",packageManager.getPackageInfo(packageName,0).versionName).put("androidSdk",Build.VERSION.SDK_INT).put("androidVersion",Build.VERSION.RELEASE).put("webViewVersion",WebView.getCurrentWebViewPackage()?.versionName?:"unknown").put("microphonePermissionGranted",checkSelfPermission(Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED).put("audioSettingsPermissionGranted",checkSelfPermission(Manifest.permission.MODIFY_AUDIO_SETTINGS)==PackageManager.PERMISSION_GRANTED)
                 "identity.get"->JSONObject().put("publicKey",storage.publicKey())
                 "identity.sign"->storage.sign(request.getString("purpose"),request.get("value"))
                 "identity.verify"->storage.verify(request.getString("publicKey"),request.getString("purpose"),request.get("value"),request.getString("signature"))
@@ -64,12 +76,16 @@ class MainActivity: Activity() {
             catch(error:Exception){val cause=error.cause?:error;val message=if(updateCall&&(cause is java.net.UnknownHostException||cause is java.net.SocketTimeoutException))"Check your internet connection and try the update again." else cause.message?:"The app could not finish this action. Please try again.";reply(JSONObject().put("rpcId",rpcId).put("error",message))}
         }}
     }
+    private fun notifyNetwork(){runOnUiThread{if(isFinishing||isDestroyed)return@runOnUiThread;val network=networkManager?.activeNetwork;val online=network!=null&&networkManager?.getNetworkCapabilities(network)?.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)==true;if(network==lastNetwork&&online==lastOnline)return@runOnUiThread;lastNetwork=network;lastOnline=online;web.evaluateJavascript("window.dispatchEvent(new CustomEvent('devicebridge-network',{detail:{online:"+online+"}}));",null)}}
     private fun reply(value:JSONObject){runOnUiThread{if(!isFinishing&&!isDestroyed)web.evaluateJavascript("window.dispatchEvent(new CustomEvent('devicebridge-native',{detail:"+value.toString()+"}));",null)}}
     private fun setFullscreen(enabled:Boolean){fullscreen=enabled;val controller=WindowInsetsControllerCompat(window,web);controller.systemBarsBehavior=WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE;if(enabled)controller.hide(WindowInsetsCompat.Type.systemBars())else controller.show(WindowInsetsCompat.Type.systemBars())}
     private fun handleBack(){if(fullscreen){setFullscreen(false);web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-exit-fullscreen'));",null)}else finish()}
     @Suppress("DEPRECATION","OVERRIDE_DEPRECATION") override fun onBackPressed(){handleBack()}
-    override fun onRequestPermissionsResult(code:Int,permissions:Array<out String>,results:IntArray){super.onRequestPermissionsResult(code,permissions,results);if(code==41){val request=microphoneRequest;microphoneRequest=null;if(results.firstOrNull()==PackageManager.PERMISSION_GRANTED)request?.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))else request?.deny()}}
-    override fun onPause(){super.onPause();microphoneRequest?.deny();microphoneRequest=null;web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-pause')); "){web.onPause()}}
-    override fun onResume(){super.onResume();if(::web.isInitialized){web.onResume();web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-resume'));",null)}}
-    override fun onDestroy(){microphoneRequest?.deny();web.removeJavascriptInterface("DeviceBridgeAndroid");web.destroy();worker.shutdownNow();updateWorker.shutdownNow();super.onDestroy()}
+    override fun onRequestPermissionsResult(code:Int,permissions:Array<out String>,results:IntArray){super.onRequestPermissionsResult(code,permissions,results);if(code==41){val request=microphoneRequest;microphoneRequest=null;if(microphoneFlow.complete(results.firstOrNull()==PackageManager.PERMISSION_GRANTED))request?.grant(arrayOf(PermissionRequest.RESOURCE_AUDIO_CAPTURE))else request?.deny()}}
+
+    private fun pauseRemote(){if(remotePaused||!::web.isInitialized)return;remotePaused=true;web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-pause'));"){if(remotePaused&&!isDestroyed)web.onPause()}}
+    override fun onPause(){super.onPause();if(microphoneFlow.shouldPauseOnActivityPause())pauseRemote()}
+    override fun onStop(){super.onStop();microphoneFlow.stopped();microphoneRequest?.deny();microphoneRequest=null;pauseRemote()}
+    override fun onResume(){super.onResume();microphoneFlow.resumed();if(::web.isInitialized){web.onResume();if(remotePaused){remotePaused=false;web.evaluateJavascript("window.dispatchEvent(new Event('devicebridge-resume'));",null)}}}
+    override fun onDestroy(){if(networkRegistered){networkManager?.unregisterNetworkCallback(networkCallback);networkRegistered=false};microphoneRequest?.deny();web.removeJavascriptInterface("DeviceBridgeAndroid");web.destroy();worker.shutdownNow();updateWorker.shutdownNow();super.onDestroy()}
 }

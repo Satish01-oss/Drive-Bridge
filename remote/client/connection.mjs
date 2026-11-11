@@ -2,8 +2,10 @@ import {createIdentity,identityId,signValue,verifyValue,canonical,toBase64Url} f
 import {PERMISSIONS,validateMessage} from '../core/protocol.mjs';
 const id=()=>toBase64Url(crypto.getRandomValues(new Uint8Array(24)));
 export class ConnectionClient{
+ #now;#interval;#clearInterval;#lastSocketMessage=0;
  #base;#store;#fetch;#WebSocket;#identity;#identityProvider;#deviceId;#token;#socket;#generation=0;#stopper=null;#starting=null;#queue=Promise.resolve();#heartbeat;#listeners=new Set();#requests=new Map();#grants=new Map();#sessions=new Map();#revoked=new Set();#pairingOperation=null;
- constructor({baseUrl,store,identityProvider=null,fetchImpl=fetch,WebSocketImpl=WebSocket}){
+ constructor({baseUrl,store,identityProvider=null,fetchImpl=fetch,WebSocketImpl=WebSocket,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval}){
+  this.#now=now;this.#interval=interval;this.#clearInterval=cancelInterval;
   const u=new URL(baseUrl);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)))throw Error('HTTPS required');if(u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Expected service origin');
   this.#base=u.origin;this.#store=store;this.#identityProvider=identityProvider;this.#fetch=fetchImpl.bind(globalThis);this.#WebSocket=WebSocketImpl;
  }
@@ -44,19 +46,19 @@ export class ConnectionClient{
     const ws=new this.#WebSocket(this.#base.replace(/^http/,'ws')+'/v1/ws',['devicebridge.v1','ticket.'+ticket]);this.#socket=ws;
     const timeout=setTimeout(()=>{ws.close();reject(Error('Connection service timed out'));},15000);
     const fail=()=>{clearTimeout(timeout);reject(Error('Connection service disconnected'));};
-    ws.addEventListener('error',fail,{once:true});ws.addEventListener('close',()=>{fail();if(generation!==this.#generation)return;clearInterval(this.#heartbeat);this.#emit({type:'status',status:'service-offline'});});
+    ws.addEventListener('error',fail,{once:true});ws.addEventListener('close',()=>{fail();if(generation!==this.#generation)return;this.#clearInterval(this.#heartbeat);this.#emit({type:'status',status:'service-offline'});});
     ws.addEventListener('message',event=>{this.#queue=this.#queue.then(async()=>{
      if(generation!==this.#generation||this.#socket!==ws)return;
-     const data=JSON.parse(event.data);if(data.type==='ready'){if(data.deviceId!==this.#deviceId)throw Error('Socket identity mismatch');clearTimeout(timeout);resolve();return;}
+     this.#lastSocketMessage=this.#now();const data=JSON.parse(event.data);if(data.type==='ready'){if(data.deviceId!==this.#deviceId)throw Error('Socket identity mismatch');clearTimeout(timeout);resolve();return;}
      await this.#process(data,generation);
     }).catch(error=>{if(generation===this.#generation)this.#emit({type:'error',message:error.message});});});
    });current();
-   this.#heartbeat=setInterval(()=>{if(this.connected)this.#socket.send(JSON.stringify({type:'heartbeat'}));},20000);this.#heartbeat.unref?.();
+   this.#lastSocketMessage=this.#now();this.#heartbeat=this.#interval(()=>{if(!this.connected)return;if(this.#now()-this.#lastSocketMessage>60000){this.#socket.close(4000,'heartbeat-timeout');return;}this.#socket.send(JSON.stringify({type:'heartbeat'}));},20000);this.#heartbeat.unref?.();
    this.#emit({type:'status',status:'service-connected'});
    const requests=await this.#http('/v1/requests');for(const request of requests.requests){this.#requests.set(request.requestId,request);if(request.hostId===this.#deviceId&&request.status==='pending')this.#emit({type:'pairing-request',request});}
    // Server listings never silently grant new trust. Only locally approved records persist.
    const remote=await this.#http('/v1/grants');for(const record of remote.grants){const saved=this.#grants.get(record.grant.id);if(saved&&canonical(saved.grant)===canonical(record.grant))await this.#knownGrant(record);}
-  })().catch(error=>{if(generation===this.#generation){clearInterval(this.#heartbeat);this.#socket?.close();this.#emit({type:'status',status:'service-offline'});}throw error;}).finally(()=>{if(generation===this.#generation)this.#starting=null;});
+  })().catch(error=>{if(generation===this.#generation){this.#clearInterval(this.#heartbeat);this.#socket?.close();this.#emit({type:'status',status:'service-offline'});}throw error;}).finally(()=>{if(generation===this.#generation)this.#starting=null;});
   return this.#starting;
  }
  async #process(event,generation){
@@ -111,5 +113,5 @@ export class ConnectionClient{
   const g=record.grant,content={grantId,from:this.#deviceId,to:this.#deviceId===g.hostId?g.controllerId:g.hostId,message};
   this.#acceptSignal(g,message,this.#deviceId);const signature=await this.#sign('signal',content);this.#trusted(record,generation);if(!this.connected)throw Error('Service disconnected');this.#socket.send(JSON.stringify({type:'signal',signed:{...content,signature}}));
  }
- stop(){this.#generation++;this.#starting=null;this.#pairingOperation=null;this.#stopper?.abort();clearInterval(this.#heartbeat);this.#socket?.close();this.#socket=null;this.#token=null;this.#emit({type:'status',status:'stopped'});}
+ stop(){this.#generation++;this.#starting=null;this.#pairingOperation=null;this.#stopper?.abort();this.#clearInterval(this.#heartbeat);this.#socket?.close();this.#socket=null;this.#token=null;this.#emit({type:'status',status:'stopped'});}
 }

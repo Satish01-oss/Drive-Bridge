@@ -1,6 +1,6 @@
-# Zero-cost hosting constraint — 10 November 2026
+# Zero-cost hosting constraint — 11 November 2026
 
-The user has limited the current release to Windows and Android, with **no paid resources provisioned**. Mac/iPhone work is deferred. Use existing GitHub Pages for the website and tracker.
+The user has limited the current release to Windows and Android, with **no paid resources provisioned**. Mac/iPhone work is deferred. The frontend and tracker are deployed on Vercel Hobby; GitHub Pages remains compatible with existing update feeds.
 
 ## Initial signaling trial
 
@@ -8,13 +8,13 @@ Render's free web service supports WebSockets and TLS, making it suitable for a 
 
 Sources: [free-service limits](https://render.com/docs/free), [WebSocket behavior](https://render.com/docs/websocket). The user authorized setup in their signed-in account. `devicebridge-signaling-preview` is deployed on Free and its public HTTPS health check passes. No payment method or paid upgrade was added.
 
-The broker's in-memory state resets at restart. Windows persists host-signed grants in DPAPI-protected storage and restores only reconnect-enabled, unexpired approvals after authenticating. Local revocation is persisted before making its network request, so a failed request cannot restore a locally removed grant. These paths pass real client/service tests; physical Android outage recovery is pending. Render's free Postgres is not used.
+The broker's in-memory state resets at restart. Windows persists host-signed grants in DPAPI-protected storage and restores only reconnect-enabled, unexpired approvals after authenticating. Local revocation is persisted before making its network request, so a failed request cannot restore a locally removed grant. These paths pass real client/service tests; the user confirmed physical Android recovery after PC internet loss on 11 November 2026. Render's free Postgres is not used.
 
 ## Relay bandwidth
 
 Use direct encrypted WebRTC where possible. Free STUN can help discover direct paths, but some network combinations need TURN; HTTPS website hosting alone cannot relay arbitrary WebRTC media.
 
-Cloudflare documents free unlimited STUN and a 1,000 GB TURN free tier, with metered usage beyond it. This is a candidate for review, **not an unlimited-free guarantee**. Do not activate a billable service without a verified way to enforce the user's zero-cost requirement and their explicit authorization for any account/billing step. Without a configured relay, the app must explain when a restrictive network prevents a direct connection.
+Cloudflare documents free unlimited STUN and metered standalone TURN at $0.05/GB. Its free allowances and billing conditions must be verified for the specific account and product before provisioning. This is a candidate for review, **not an unlimited-free guarantee**. Do not activate a billable service without a verified way to enforce the user's zero-cost requirement and their explicit authorization for any account/billing step. Without a configured relay, the app must explain when a restrictive network prevents a direct connection.
 
 Source: [Cloudflare TURN FAQ](https://developers.cloudflare.com/realtime/turn/faq/).
 

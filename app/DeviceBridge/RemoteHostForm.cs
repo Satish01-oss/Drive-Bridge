@@ -16,6 +16,7 @@ internal sealed class RemoteHostForm : Form
     readonly RemoteInput input = new();
     readonly NotifyIcon tray;
     readonly bool designPreview;
+    readonly bool startHidden;
     string? captureId;
     Rectangle captureBounds;
     bool allowInput;
@@ -32,16 +33,17 @@ internal sealed class RemoteHostForm : Form
     public event EventHandler? MainMenuRequested;
     internal void GoToMainMenu() { Hide(); MainMenuRequested?.Invoke(this,EventArgs.Empty); }
     internal void QuitApp() { QuitRequested=true; Close(); }
-    public RemoteHostForm(bool designPreview = false)
+    public RemoteHostForm(bool designPreview = false, bool startHidden = false)
     {
-        this.designPreview = designPreview;
+        this.designPreview = designPreview; this.startHidden=startHidden;
+        if(startHidden){Opacity=0;ShowInTaskbar=false;}
         Text = AppActivation.RemoteTitle; Icon = AppActivation.Icon; ClientSize = new Size(1020, 790); MinimumSize = new Size(780, 620); StartPosition = FormStartPosition.CenterScreen;
         input.Failed += message => { EmergencyStop(); Post(new { type = "native-error", message }); };
         Controls.Add(web); Controls.Add(AppNavigation.Bar(GoToMainMenu)); var menu = new ContextMenuStrip(); menu.Items.Add("Open DeviceBridge", null, (_, _) => RestoreWindow());
         menu.Items.Add("Stop remote sharing", null, (_, _) => EmergencyStop()); menu.Items.Add("Main menu", null, (_, _) => GoToMainMenu());
         menu.Items.Add("Disconnect and quit", null, (_, _) => QuitApp());
         tray = new NotifyIcon { Icon = AppActivation.Icon, Text = "DeviceBridge · Remote", ContextMenuStrip = menu, Visible = true }; tray.DoubleClick += (_, _) => RestoreWindow();
-        Shown += async (_, _) => { if(!designPreview || Opacity!=0) await InitializeAsync(); };
+        Shown += async (_, _) => { if(startHidden){Hide();Opacity=1;ShowInTaskbar=true;} if(!designPreview || Opacity!=0) await InitializeAsync(); };
         Resize += (_, _) => { if (WindowState == FormWindowState.Minimized) Hide(); };
         FormClosing += (_, e) => { if (!QuitRequested && e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); } };
         FormClosed += (_, _) => { StopCapture(); input.Dispose(); tray.Visible = false; tray.Dispose(); UnregisterHotKey(Handle, 41); };
@@ -103,6 +105,8 @@ internal sealed class RemoteHostForm : Form
             object? result = null;
             switch (type)
             {
+                case "startup.get": result=new {enabled=new RemoteStartup(Application.ExecutablePath).Enabled}; break;
+                case "startup.set": if(designPreview)throw new IOException("Startup changes are disabled in design preview."); var startup=new RemoteStartup(Application.ExecutablePath);startup.Set(request.GetProperty("enabled").GetBoolean());result=new {enabled=startup.Enabled};break;
                 case "host.pause": sharingPaused = true; StopCapture(); break;
                 case "host.resume": sharingPaused = false; break;
                 case "pairing.notify": RestoreWindow(); tray.ShowBalloonTip(8000, "A phone wants to connect", "Review the request in DeviceBridge. Sharing starts only after you allow it.", ToolTipIcon.Info); break;

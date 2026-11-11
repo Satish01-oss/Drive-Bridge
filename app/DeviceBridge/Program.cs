@@ -30,7 +30,7 @@ internal static class Program
             if (!AppActivation.RaiseExisting()) MessageBox.Show("An older DeviceBridge copy is already running. Close its session and welcome windows, then open this update. New versions can be reopened from the system tray.", "DeviceBridge", MessageBoxButtons.OK, MessageBoxIcon.Information);
             return;
         }
-        if (args.Contains("--remote")) { var welcome=new WelcomeForm(); welcome.Shown += (_, _) => welcome.OpenRemote(); Application.Run(welcome); }
+        if (args.Contains("--remote")) { var welcome=new WelcomeForm(); var startHidden=args.Contains("--start-hidden");if(startHidden){welcome.Opacity=0;welcome.ShowInTaskbar=false;} welcome.Shown += (_, _) => welcome.OpenRemote(startHidden); Application.Run(welcome); }
         else if (args.Contains("--diagnostics")) Application.Run(new DiagnosticsForm());
         else if (args.Contains("--inventory")) File.WriteAllText(Path.Combine(AppContext.BaseDirectory, "setup-report.txt"), DiagnosticsForm.EnvironmentReport());
         else Application.Run(new WelcomeForm());

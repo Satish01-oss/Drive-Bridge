@@ -78,3 +78,6 @@ begin
   else if not WebViewInstalled then
     Result := 'The Windows app runtime could not finish installing (code ' + IntToStr(ExitCode) + '). Restart Windows, then run this same installer again.';
 end;
+
+[Registry]
+Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "DeviceBridge.Remote"; Flags: uninsdeletevalue

@@ -10,6 +10,7 @@ public static class SelfTest
     {
         var passed = new List<string>();
         void Check(bool okay, string name) { if (!okay) throw new Exception("FAILED: " + name); passed.Add(name); }
+        RemoteStartup.Check(Check);
         passed.AddRange(await RemoteNativeCheck.RunAsync());
         await NavigationCheck.RunAsync();
         passed.Add("Main menu retains both session modes, Continue reuses them, local role switching disposes the old role, and Quit closes every session");
