@@ -12,7 +12,7 @@ Progress and acceptance evidence: https://devicebridge-frontend.vercel.app/impro
 
 Compatibility release/update feed: https://satish01-oss.github.io/Drive-Bridge/
 
-Stable Windows is **0.8.0**. The separate **0.9.0-preview.12** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
+Stable Windows is **0.8.0**. The separate **0.9.0-preview.13** adds the native Windows remote host and signed Android companion. Its source-pinned release includes both installers and SHA-256 sums. Local screen/input/background tests and automated checks pass; physical Android, audio and separate-network recovery acceptance remain pending. No TURN relay is configured.
 
 Original public website: https://devicebridge-windows.majorpiece.chatgpt.site
 
