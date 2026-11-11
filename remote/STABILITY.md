@@ -1,3 +1,5 @@
+> Historical preview 11/12 implementation. Preview 13 restores the original WebRTC mode at the user’s request; this forced split and adaptive scaling are no longer active. See ORIGINAL-MODE.md.
+
 # Preview 12: connection recovery and UDP screen stability
 
 The physical preview 11 phone report showed `mediaProtocol: udp`, connected ICE,

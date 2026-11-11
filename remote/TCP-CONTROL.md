@@ -1,3 +1,5 @@
+> Historical preview 11/12 implementation. Preview 13 restores the original WebRTC mode at the user’s request; this forced split and adaptive scaling are no longer active. See ORIGINAL-MODE.md.
+
 # UDP media and encrypted TCP controls
 
 This update keeps the Windows LAN sharing transport separate. It changes the Android remote mode.
