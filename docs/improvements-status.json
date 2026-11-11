@@ -577,9 +577,9 @@
       "title": "Refresh the website for Windows and Android preview 8",
       "plan": "Show both app modes on the landing page, keep stable and preview downloads distinct, display the current preview version and explain zoom/fullscreen/Main menu and app updates.",
       "acceptance": "The public frontend works on desktop and mobile, links to the correct Windows/Android downloads and shows the current feature/setup guide.",
-      "status": "in_progress",
-      "evidence": "Implemented homepage choices for stable Windows sharing and the Android preview, current preview badges, zoom/fullscreen/Main menu guides and clearer update instructions. The frontend build verifies the real stable EXE SHA-256 and Android preview metadata. Twelve website/release tests pass. Browser checks at 1440, 390 and 320 pixels show correct versions, functional preview/help navigation and no horizontal overflow. Public deployment is next."
+      "status": "done",
+      "evidence": "Implemented homepage choices for stable Windows sharing and the Android preview, current preview badges, zoom/fullscreen/Main menu guides and clearer update instructions. The frontend build verifies the real stable EXE SHA-256 and Android preview metadata. Twelve website/release tests pass. Browser checks at 1440, 390 and 320 pixels show correct versions, functional preview/help navigation and no horizontal overflow. Public deployment is next. Published source 34f82da7a0793f05f086c6e685cfadb19d618e27 to READY Vercel deployment dpl_JBQQRivgtL3BoPks1SiEjhiMALPn. The public homepage, preview guide, checklist and preview 8 metadata return 200 and contain the expected updates. No app binaries or backend configuration were changed."
     }
   ],
-  "stage": "The user accepted preview 8 as working. Zoom and Windows menu navigation are checked as user-confirmed. Refreshing the website for both modes, current versions and clearer setup/update guides; dedicated phone audio and internet recovery tests remain open."
+  "stage": "The refreshed Windows/Android website is live on Vercel with current versions, download choices and setup/update guides. Preview 8 zoom and Windows Main menu navigation are user-confirmed and checked. Dedicated phone audio, separate-network access and recovery tests remain open; Mac/iPhone remain deferred."
 }
