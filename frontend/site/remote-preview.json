@@ -1,28 +1,28 @@
 {
   "version": "0.9.0",
-  "preview": 8,
-  "tag": "v0.9.0-preview.8",
-  "source": "d150d5ecc28f02af146c5a92bd3f0931010d07fb",
-  "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/tag/v0.9.0-preview.8",
+  "preview": 9,
+  "tag": "v0.9.0-preview.9",
+  "source": "6f91e9b9096c93e05bd75295e4af25fa55d75504",
+  "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/tag/v0.9.0-preview.9",
   "windows": {
     "filename": "DeviceBridge-Setup-0.9.0.exe",
-    "bytes": 280500499,
-    "sha256": "4ffe483b0bafbb9114d428998b1ecf85be69003345e288c6f07dc3793e347186",
-    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.8/DeviceBridge-Setup-0.9.0.exe"
+    "bytes": 280504540,
+    "sha256": "71a145c4e372d6bf48b2e9d5ab7b8f3d961458cdafb5c56d1dff8f37c7e9e8c6",
+    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.9/DeviceBridge-Setup-0.9.0.exe"
   },
   "android": {
-    "versionCode": 908,
-    "versionName": "0.9.0-preview.8",
+    "versionCode": 909,
+    "versionName": "0.9.0-preview.9",
     "filename": "DeviceBridge-Android-0.9.0-preview.apk",
-    "bytes": 4083418,
-    "sha256": "2f706decc1b16fe4721773b79d8c17bcb97d4ba022debae63e0794e7f2a3dab9",
-    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.8/DeviceBridge-Android-0.9.0-preview.apk"
+    "bytes": 4088166,
+    "sha256": "a0af2371287b50e59e266934a968cdfdee4c997604df813f76d7776805531872",
+    "url": "https://github.com/Satish01-oss/Drive-Bridge/releases/download/v0.9.0-preview.9/DeviceBridge-Android-0.9.0-preview.apk"
   },
   "verification": {
-    "windowsWorkflow": "https://github.com/Satish01-oss/Drive-Bridge/actions/runs/42966799590",
-    "windowsChecks": 93,
-    "sharedChecks": 105,
-    "androidNativeChecks": 9,
+    "windowsWorkflow": "https://github.com/Satish01-oss/Drive-Bridge/actions/runs/42976320990",
+    "windowsChecks": 99,
+    "sharedChecks": 113,
+    "androidNativeChecks": 14,
     "physicalAndroid": false
   }
 }
