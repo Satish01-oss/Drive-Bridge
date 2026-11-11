@@ -72,3 +72,5 @@ test('a thrown transport send still closes once and releases every host resource
 test('a cleanup failure cannot skip remaining cleanup or the disconnected event',async t=>{
  const f=setup(t);await f.connect();f.resources.releaseInput=()=>{f.counts.release++;throw Error('release unavailable');};f.resources.dispose=()=>{f.counts.dispose++;throw Error('dispose unavailable');};f.host.close('user');assert.equal(f.counts.release,1);assert.equal(f.counts.dispose,1);assert.deepEqual(f.events.find(e=>e.type==='closed').cleanupErrors,['release-input','dispose-media']);assert.equal(f.host.active,false);
 });
+
+test('browser timer APIs are invoked with the global receiver',async t=>{let started=0;const f=setup(t,{peerOptions:{interval:function(){assert.equal(this,globalThis);started++;return 1;},cancelInterval:function(){assert.equal(this,globalThis);}}});await f.connect();assert.equal(started,2);assert.equal(f.phone.ready,true);f.phone.close();f.host.close();});

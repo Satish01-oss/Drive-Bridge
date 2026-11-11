@@ -8,7 +8,7 @@ export class RemotePeer{
  #receivedSignals=0;
  #client;#record;#role;#pc;#channel;#resources;#acquire;#event;#unsubscribe;#sessionId;#generation;#outgoing=Promise.resolve();#incoming=Promise.resolve();#signalSeq=0;#dataSeq=0;#gate;#closed=false;#ready=false;#permissions=[];#candidates=[];#remoteCount=0;#heartbeat;#deadline;#lastData=Date.now();#microphone;#localMicrophone;
  constructor({client,record,role,acquireHost,event=()=>{},iceServers=[{urls:'stun:stun.cloudflare.com:3478'}],PeerConnection=RTCPeerConnection,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval,getUserMedia=options=>navigator.mediaDevices.getUserMedia(options)}){
-  this.#getUserMedia=getUserMedia;this.#now=now;this.#interval=interval;this.#clearInterval=cancelInterval;
+  this.#getUserMedia=getUserMedia;this.#now=now;this.#interval=interval.bind(globalThis);this.#clearInterval=cancelInterval.bind(globalThis);
   if(!['host','controller'].includes(role))throw Error('Invalid role');const g=record.grant;if(client.deviceId!==(role==='host'?g.hostId:g.controllerId))throw Error('Wrong device role');
   this.#client=client;this.#record=record;this.#role=role;this.#acquire=acquireHost;this.#event=event;this.#pc=new PeerConnection({iceServers});
   this.#pc.onicecandidate=e=>{if(e.candidate)this.#signal('candidate',JSON.stringify(e.candidate.toJSON()));};

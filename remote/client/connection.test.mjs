@@ -114,3 +114,5 @@ test('revocation during slow signal verification prevents delivery to the deskto
 test('a silent service socket is replaced without deleting the trusted computer',async t=>{
  let now=Date.now(),tick;const f=await fixture(t,{phoneOptions:{now:()=>now,interval:fn=>{tick=fn;return 1;},cancelInterval:()=>{}}});const record=await paired(f),next=events(f.phone);now+=61000;tick();await next('status');await f.phone.start();assert.equal(f.phone.connected,true);assert.equal(f.phone.grants[0].grant.id,record.grant.id);await f.phone.sendSignal(record.grant.id,message(id(),1,0));assert.equal((await f.hostEvent('signal')).signed.grantId,record.grant.id);
 });
+
+test('service heartbeat timer APIs retain the browser global receiver',async t=>{let started=0;const f=await fixture(t,{phoneOptions:{interval:function(){assert.equal(this,globalThis);started++;return 1;},cancelInterval:function(){assert.equal(this,globalThis);}}});assert.equal(f.phone.connected,true);assert.equal(started,1);f.phone.stop();});

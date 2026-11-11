@@ -5,7 +5,7 @@ export class ConnectionClient{
  #now;#interval;#clearInterval;#lastSocketMessage=0;
  #base;#store;#fetch;#WebSocket;#identity;#identityProvider;#deviceId;#token;#socket;#generation=0;#stopper=null;#starting=null;#queue=Promise.resolve();#heartbeat;#listeners=new Set();#requests=new Map();#grants=new Map();#sessions=new Map();#revoked=new Set();#pairingOperation=null;
  constructor({baseUrl,store,identityProvider=null,fetchImpl=fetch,WebSocketImpl=WebSocket,now=()=>Date.now(),interval=setInterval,cancelInterval=clearInterval}){
-  this.#now=now;this.#interval=interval;this.#clearInterval=cancelInterval;
+  this.#now=now;this.#interval=interval.bind(globalThis);this.#clearInterval=cancelInterval.bind(globalThis);
   const u=new URL(baseUrl);if(u.protocol!=='https:'&&!(u.protocol==='http:'&&['localhost','127.0.0.1','[::1]'].includes(u.hostname)))throw Error('HTTPS required');if(u.username||u.password||u.pathname!=='/'||u.search||u.hash)throw Error('Expected service origin');
   this.#base=u.origin;this.#store=store;this.#identityProvider=identityProvider;this.#fetch=fetchImpl.bind(globalThis);this.#WebSocket=WebSocketImpl;
  }
