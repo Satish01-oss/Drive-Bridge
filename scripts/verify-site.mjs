@@ -2,6 +2,7 @@ import { readFile, stat } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { resolve, dirname, relative } from 'node:path';
 import { validateDescriptor } from './sync-android-update.mjs';
+import { previewRelease } from '../frontend/site/preview-release.mjs';
 
 const root = resolve(process.argv[2]||'frontend/site');
 async function localFile(path) {
@@ -26,7 +27,12 @@ for (const name of ['release.json', 'test-release.json']) {
 for (const name of ['index.html', 'test.html', 'credits.html', 'remote-preview.html', 'improvements.html']) {
   const path = resolve(root, name);
   const html = (await localFile(path)).toString();
-  if (['index.html', 'test.html'].includes(name)) {
+  if(name==='index.html'){
+    const ids=[...html.matchAll(/\bid="([^"]+)"/g)].map(m=>m[1]);
+    if(new Set(ids).size!==ids.length)throw Error('Homepage has duplicate section IDs');
+    for(const [,target]of html.matchAll(/href="#([^"]+)"/g))if(!ids.includes(target))throw Error('Homepage link has no target: '+target);
+  }
+  if (name==='test.html'||name==='index.html'&&!html.includes('data-primary-download="remote-preview"')) {
     const manifest = JSON.parse(await localFile(resolve(root, name === 'test.html' ? 'test-release.json' : 'release.json')));
     const versions = [...html.matchAll(/data-release-version>([^<]*)</g)].map(m => m[1]);
     if (!versions.length || versions.some(v => v !== manifest.version)) throw new Error(`${name}: visible versions differ from the download`);
@@ -41,7 +47,11 @@ for (const name of ['index.html', 'test.html', 'credits.html', 'remote-preview.h
   console.log(`${name}: local links and assets verified`);
 }
 const preview=JSON.parse(await localFile(resolve(root,'remote-preview.json')));
-const previewPage=(await localFile(resolve(root,'remote-preview.html'))).toString();
+const previewPage=(await localFile(resolve(root,'index.html'))).toString();
+const previewReleaseInfo=previewRelease(preview);
+const primaryVersions=[...previewPage.matchAll(/data-preview-version>([^<]*)</g)].map(m=>m[1]);
+if(!previewPage.includes('data-primary-download="remote-preview"')||!primaryVersions.length||primaryVersions.some(v=>v!==previewReleaseInfo.label)||previewPage.includes('data-download'))throw Error('Homepage primary download/version mismatch');
+if(!(await localFile(resolve(root,'remote-preview.html'))).toString().includes('0;url=index.html#download'))throw Error('Old preview link must redirect to the main downloads');
 if(!Number.isInteger(preview.android.versionCode)||preview.android.versionCode<1||preview.android.versionName!==preview.tag.slice(1))throw Error('Android update version metadata is invalid');
 if(!/^v\d+\.\d+\.\d+-preview\.\d+$/.test(preview.tag)||!/^[a-f0-9]{40}$/.test(preview.source))throw Error('Preview source identity is invalid');
 for(const [platform,extension] of [['windows','.exe'],['android','.apk']]){

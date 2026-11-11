@@ -4,7 +4,7 @@ import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, mkdir, rm, readdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
-import { selectAsset, validateExe, syncRelease, repository } from './sync-github-release.mjs';
+import { selectAsset, validateExe, syncRelease, renderRelease, repository } from './sync-github-release.mjs';
 
 function fixture() {
   // Larger than one part so ordering and chunk reconstruction are exercised.
@@ -38,8 +38,9 @@ function mockFetch(release,exe) {
   return {fetcher,requests};
 }
 
-test('new published release updates both downloads and every visible version, date and notes link',async t=>{
+test('stable release updates the legacy download without replacing the unified preview homepage',async t=>{
   const root=await workspace(t); const {release,exe}=fixture();
+  const originalHome=await readFile(join(root,'index.html'),'utf8');
   const {fetcher,requests}=mockFetch(release,exe);
   const manifest=await syncRelease({root,fetcher,token:'fixture-token'});
   assert.equal(requests[0].options.headers.Authorization,'Bearer fixture-token');
@@ -50,14 +51,16 @@ test('new published release updates both downloads and every visible version, da
   assert.deepEqual(Buffer.concat(chunks),exe,'download must reconstruct the exact released EXE');
   assert.equal(validateExe(Buffer.concat(chunks),release.assets[0]),manifest.sha256);
   assert.equal((await readdir(join(root,'downloads'))).length,2,'stale download parts must not remain');
-  for (const page of ['index.html','test.html']) {
+  for (const page of ['test.html']) {
     const html=await readFile(join(root,page),'utf8');
     assert.doesNotMatch(html,/0\.7\.0/,'old visible version must not remain');
     assert.match(html,/data-release-version>0\.8\.0</);
   }
   const home=await readFile(join(root,'index.html'),'utf8');
-  assert.match(home,/data-release-date>10 Nov 2026</);
-  assert.match(home,/releases\/tag\/v0\.8\.0/);
+  assert.equal(home,originalHome,'stable synchronization must preserve the primary preview links and labels');
+  assert.match(home,/data-primary-download="remote-preview"/);
+  const legacy=await readFile(join(root,'test.html'),'utf8');
+  assert.match(legacy,/data-release-version>0\.8\.0</);
   assert.doesNotMatch(home,/71 local regression checks/,'old testing claims must not carry into a new release');
   assert.doesNotMatch(home,/WINDOWS PREVIEW/);
 });
@@ -83,7 +86,7 @@ test('installer is preferred to a portable app and its standard launcher updates
   const manifest=await syncRelease({root,fetcher});
   assert.equal(manifest.filename,asset.name);
   assert.equal(manifest.kind,'installer');
-  assert.match(await readFile(join(root,'index.html'),'utf8'),/Run the installer once on each PC/);
+  assert.match(renderRelease('<p data-release-setup>Old setup</p>',manifest),/Run the installer once on each PC/);
   assert.deepEqual(Buffer.concat(await Promise.all(manifest.parts.map(p=>readFile(join(root,p))))),installer);
 });
 

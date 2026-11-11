@@ -52,13 +52,18 @@ node frontend/build.mjs
 # or: cd frontend && npm run build
 ```
 
-Edit `site/`, never generated `dist/`. The public GitHub Pages release feed is
-retained for existing Android updater compatibility and automatic latest stable
-Windows downloads on Vercel. On Vercel, download buttons refresh that trusted
-feed, fetch its parts and verify SHA-256 before saving one installer. The local
-verified build remains a fallback if the feed is temporarily unavailable.
+Edit `site/`, never generated `dist/`. The main page now offers the matching
+Windows and Android preview directly, using `site/remote-preview.json`. Its
+Windows installer contains both local PC sharing and the Android host mode.
+Version labels, filenames, file sizes, release notes and download URLs render
+from the same validated metadata during the build and refresh together in the
+browser. Publish both preview assets and update that source-pinned manifest
+before pushing a new paired preview. A stable-only release must not relabel
+these preview download buttons.
 
-GitHub Pages uses the same `frontend/dist` build, so its existing download and
-update URLs continue working. The Android preview download is separate from
-the stable Windows release. Connection keys and device grants stay in the app;
-they are not website environment variables.
+The former `remote-preview.html` address redirects to `index.html#download`.
+The phone setup/update guide lives on the homepage. GitHub Pages uses the same
+`frontend/dist` build and retains the Android updater URL. The stable release
+feed and checksum-verified multipart download remain available to the older
+two-PC test guide, independently of the primary preview downloads. Connection
+keys and device grants stay in the app, not in website environment variables.

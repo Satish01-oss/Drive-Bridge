@@ -1,10 +1,11 @@
-import {cp,mkdir,rm,realpath} from 'node:fs/promises';
+import {cp,mkdir,rm,realpath,readFile,writeFile} from 'node:fs/promises';
 import {resolve,dirname,join} from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {execFileSync} from 'node:child_process';
 import {buildImprovements} from '../scripts/build-improvements.mjs';
 import {syncRelease} from '../scripts/sync-github-release.mjs';
 import {syncAndroidUpdate} from '../scripts/sync-android-update.mjs';
+import {renderPreview} from './site/preview-release.mjs';
 
 const frontend=dirname(fileURLToPath(import.meta.url)),repo=resolve(frontend,'..'),output=join(frontend,'dist');
 process.chdir(repo);
@@ -15,6 +16,8 @@ await cp(join(frontend,'site'),output,{recursive:true});
 buildImprovements({output:join(output,'improvements.html')});
 await syncRelease({root:output});
 await syncAndroidUpdate({directory:output});
+await writeFile(join(output,'index.html'),renderPreview(await readFile(join(output,'index.html'),'utf8'),JSON.parse(await readFile(join(output,'remote-preview.json'),'utf8'))));
 execFileSync(process.execPath,[join(repo,'scripts','verify-site.mjs'),output],{stdio:'inherit'});
 execFileSync(process.execPath,['--check',join(output,'app.js')],{stdio:'inherit'});
+execFileSync(process.execPath,['--check',join(output,'preview-release.mjs')],{stdio:'inherit'});
 console.log('Frontend ready: frontend/dist. Static website only; connection backend remains on Render.');
